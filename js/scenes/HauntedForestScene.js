@@ -326,10 +326,11 @@ class HauntedForestScene extends Phaser.Scene {
     else if (right) { body.setVelocityX(speed); active.setFlipX(false); }
     else { body.setVelocityX(0); }
 
+    const prefix = this.activeChar === 'nana' ? 'nana' : 'bubu';
     const cur = active.anims.currentAnim?.key;
-    if (!onGround) { if (cur !== 'nana_jump') active.play('nana_jump'); }
-    else if (left || right) { if (cur !== 'nana_run') active.play('nana_run'); }
-    else { if (cur !== 'nana_idle') active.play('nana_idle'); }
+    if (!onGround) { if (cur !== `${prefix}_jump`) active.play(`${prefix}_jump`); }
+    else if (left || right) { if (cur !== `${prefix}_run`) active.play(`${prefix}_run`); }
+    else { if (cur !== `${prefix}_idle`) active.play(`${prefix}_idle`); }
 
     const jumpPressed = Phaser.Input.Keyboard.JustDown(this.cursors.up)
       || Phaser.Input.Keyboard.JustDown(this.keyW) || this.touchJumpTrigger;
