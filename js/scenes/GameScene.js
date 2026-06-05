@@ -327,7 +327,7 @@ class GameScene extends Phaser.Scene {
     });
   }
 
-(x, y) {
+  createJumpEffect(x, y) {
     for (let i = 0; i < 6; i++) {
       const p = this.add.image(x, y, 'particle');
       p.setTint(0xd5a6e8);
