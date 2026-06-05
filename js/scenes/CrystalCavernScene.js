@@ -720,11 +720,6 @@ class CrystalCavernScene extends Phaser.Scene {
     shard.destroy();
     this.score++;
     this.scoreText.setText(`💠 水晶碎片: ${this.score} / 3`);
-    if (this.score >= 3) {
-      this.time.delayedCall(1000, () => {
-        this.scene.start('HauntedForestScene');
-      });
-    }
 
     this.createJumpEffect(shard.x, shard.y);
     for (let i = 0; i < 8; i++) {
@@ -748,16 +743,19 @@ class CrystalCavernScene extends Phaser.Scene {
   }
 
   showVictory() {
-    this.add.rectangle(416, 240, 832, 480, 0x000000, 0.7);
+    this.add.rectangle(416, 240, 832, 480, 0x000000, 0.7).setDepth(90);
     const text = this.add.text(416, 200, '💎 水晶洞窟通關！ 💎', {
       fontSize: '28px', fill: '#44ddff', fontFamily: 'monospace'
-    }).setOrigin(0.5);
-    this.add.text(416, 250, '水晶之力已收集，前往下一層...', {
+    }).setOrigin(0.5).setDepth(91);
+    this.add.text(416, 250, '前往幽靈森林...', {
       fontSize: '14px', fill: '#4488cc', fontFamily: 'monospace'
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(91);
     this.tweens.add({
       targets: text, scaleX: 1.1, scaleY: 1.1,
       duration: 800, yoyo: true, repeat: -1
+    });
+    this.time.delayedCall(2500, () => {
+      this.scene.start('HauntedForestScene');
     });
   }
 }

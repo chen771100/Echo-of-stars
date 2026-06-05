@@ -616,11 +616,6 @@ class GameScene extends Phaser.Scene {
     star.destroy();
     this.score++;
     this.scoreText.setText(`星靈碎片: ${this.score} / 3`);
-    if (this.score >= 3) {
-      this.time.delayedCall(1000, () => {
-        this.scene.start('CrystalCavernScene');
-      });
-    }
 
     this.createJumpEffect(star.x, star.y);
     for (let i = 0; i < 8; i++) {
@@ -644,16 +639,19 @@ class GameScene extends Phaser.Scene {
   }
 
   showVictory() {
-    this.add.rectangle(416, 240, 832, 480, 0x000000, 0.7);
+    this.add.rectangle(416, 240, 832, 480, 0x000000, 0.7).setDepth(90);
     const text = this.add.text(416, 200, '✨ 星雲森林通關！ ✨', {
       fontSize: '28px', fill: '#d5a6e8', fontFamily: 'monospace'
-    }).setOrigin(0.5);
-    this.add.text(416, 250, '星靈碎片已收集，前往下一個世界...', {
+    }).setOrigin(0.5).setDepth(91);
+    this.add.text(416, 250, '前往水晶洞窟...', {
       fontSize: '14px', fill: '#9b59b6', fontFamily: 'monospace'
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(91);
     this.tweens.add({
       targets: text, scaleX: 1.1, scaleY: 1.1,
       duration: 800, yoyo: true, repeat: -1
+    });
+    this.time.delayedCall(2500, () => {
+      this.scene.start('CrystalCavernScene');
     });
   }
 }
