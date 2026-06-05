@@ -2,17 +2,41 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>星靈迴響：Nana & 布布</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       background: #0a0a1a;
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
       display: flex;
       justify-content: center;
       align-items: center;
-      min-height: 100vh;
-      overflow: hidden;
+    }
+    canvas { touch-action: none; }
+    /* 橫向提示 */
+    .landscape-hint {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: #0a0a1a;
+      color: #88ddff;
+      font-family: monospace;
+      font-size: 20px;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      z-index: 999;
+      flex-direction: column;
+    }
+    .landscape-hint span { font-size: 40px; margin-bottom: 20px; }
+    @media (orientation: portrait) {
+      .landscape-hint { display: flex !important; }
+      #game-container { display: none; }
     }
     #game-container {
       border: 2px solid #6b2fa0;
@@ -21,7 +45,7 @@
   </style>
 </head>
 <body>
-  <div id="game-container"></div>
+  <div id="game-container"></div><div class="landscape-hint"><span>📱</span>請將手機轉為橫向<br>Please rotate your device</div>
   <!-- 優先從 CDN 載入，node_modules 備援 -->
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
   <script src="js/scenes/BootScene.js?v=1"></script>
