@@ -136,8 +136,20 @@ class GameScene extends Phaser.Scene {
     this.touchRight = false;
     this.touchJump = false;
     this.touchShoot = false;
+    this.touchPadVisible = false;
+    this.touchPadGroup = null;
     const isTouch = this.sys.game.device.input.touch;
+    // 切換按鈕（齒輪）
+    this.togglePadBtn = this.add.circle(806, 16, 12, 0x9b59b6, 0.6).setScrollFactor(0).setDepth(200).setInteractive();
+    this.add.text(806, 16, '⚙', { fontSize: '14px', fill: '#fff', fontFamily: 'monospace' }).setOrigin(0.5).setScrollFactor(0).setDepth(201);
+    this.togglePadBtn.on('pointerdown', () => {
+      this.touchPadVisible = !this.touchPadVisible;
+      if (this.touchPadVisible) this.createVirtualDPad();
+      else this.destroyVirtualDPad();
+    });
+    // 觸控裝置自動啟用
     if (isTouch) {
+      this.touchPadVisible = true;
       this.createVirtualDPad();
     }
 
@@ -296,35 +308,57 @@ class GameScene extends Phaser.Scene {
   }
   // ── 虛擬 D-Pad（觸控用）──
   createVirtualDPad() {
+    if (this.touchPadGroup) this.destroyVirtualDPad();
+    this.touchPadGroup = this.add.group();
     const btnAlpha = 0.35;
     const btnColor = 0xd5a6e8;
     const btnSize = 48;
-    this.btnLeft   = this.add.circle(60, 420, btnSize, btnColor, btnAlpha).setScrollFactor(0).setDepth(100);
-    this.btnRight  = this.add.circle(160, 420, btnSize, btnColor, btnAlpha).setScrollFactor(0).setDepth(100);
-    this.btnJump   = this.add.circle(740, 380, btnSize, btnColor, btnAlpha).setScrollFactor(0).setDepth(100);
-    this.btnShoot  = this.add.circle(770, 300, btnSize/1.3, btnColor, btnAlpha).setScrollFactor(0).setDepth(100);
+    const pad = this.touchPadGroup;
+
+    const bL = pad.create(60, 420, this.add.circle(0, 0, btnSize, btnColor, btnAlpha));
+    bL.setScrollFactor(0).setDepth(100);
+    const bR = pad.create(160, 420, this.add.circle(0, 0, btnSize, btnColor, btnAlpha));
+    bR.setScrollFactor(0).setDepth(100);
+    const bJ = pad.create(740, 380, this.add.circle(0, 0, btnSize, btnColor, btnAlpha));
+    bJ.setScrollFactor(0).setDepth(100);
+    const bS = pad.create(770, 300, this.add.circle(0, 0, btnSize/1.3, btnColor, btnAlpha));
+    bS.setScrollFactor(0).setDepth(100);
 
     // 標示文字
     const style = { fontSize: '20px', fill: '#ffffff', fontFamily: 'monospace' };
-    this.add.text(60, 420, '◀', style).setOrigin(0.5).setScrollFactor(0).setDepth(101);
-    this.add.text(160, 420, '▶', style).setOrigin(0.5).setScrollFactor(0).setDepth(101);
-    this.add.text(740, 380, '▲', style).setOrigin(0.5).setScrollFactor(0).setDepth(101);
-    this.add.text(770, 300, '⚡', { fontSize: '16px', fill: '#ffd700', fontFamily: 'monospace' }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
+    const tL = pad.create(60, 420, this.add.text(0, 0, '◀', style)); tL.setOrigin(0.5).setScrollFactor(0).setDepth(101);
+    const tR = pad.create(160, 420, this.add.text(0, 0, '▶', style)); tR.setOrigin(0.5).setScrollFactor(0).setDepth(101);
+    const tJ = pad.create(740, 380, this.add.text(0, 0, '▲', style)); tJ.setOrigin(0.5).setScrollFactor(0).setDepth(101);
+    const tS = pad.create(770, 300, this.add.text(0, 0, '⚡', { fontSize: '16px', fill: '#ffd700', fontFamily: 'monospace' }));
+    tS.setOrigin(0.5).setScrollFactor(0).setDepth(101);
 
-    // 觸控事件
-    this.input.on('pointerdown', (pointer) => {
-      const x = pointer.x, y = pointer.y;
-      if (Phaser.Math.Distance.Between(x, y, 60, 420) < btnSize) this.touchLeft = true;
-      if (Phaser.Math.Distance.Between(x, y, 160, 420) < btnSize) this.touchRight = true;
-      if (Phaser.Math.Distance.Between(x, y, 740, 380) < btnSize) { this.touchJump = true; this.touchJumpTrigger = true; }
-      if (Phaser.Math.Distance.Between(x, y, 770, 300) < btnSize/1.3) { this.touchShootTrigger = true; }
-    });
-    this.input.on('pointerup', () => {
-      // 放開手指→重置所有觸控狀態
-      this.touchLeft = false;
-      this.touchRight = false;
-      this.touchJump = false;
-    });
+    // 觸控事件（僅一次）
+    if (!this._touchEventsBound) {
+      this._touchEventsBound = true;
+      this.input.on('pointerdown', (pointer) => {
+        if (!this.touchPadVisible) return;
+        const x = pointer.x, y = pointer.y;
+        if (Phaser.Math.Distance.Between(x, y, 60, 420) < btnSize) this.touchLeft = true;
+        if (Phaser.Math.Distance.Between(x, y, 160, 420) < btnSize) this.touchRight = true;
+        if (Phaser.Math.Distance.Between(x, y, 740, 380) < btnSize) { this.touchJump = true; this.touchJumpTrigger = true; }
+        if (Phaser.Math.Distance.Between(x, y, 770, 300) < btnSize/1.3) { this.touchShootTrigger = true; }
+      });
+      this.input.on('pointerup', () => {
+        this.touchLeft = false;
+        this.touchRight = false;
+        this.touchJump = false;
+      });
+    }
+  }
+
+  destroyVirtualDPad() {
+    if (this.touchPadGroup) {
+      this.touchPadGroup.clear(true, true);
+      this.touchPadGroup = null;
+    }
+    this.touchLeft = false;
+    this.touchRight = false;
+    this.touchJump = false;
   }
 
   createJumpEffect(x, y) {
@@ -344,7 +378,7 @@ class GameScene extends Phaser.Scene {
   }
 
   shootMagic() {
-    const dir = this.nana.flipX ? 1 : -1;
+    const dir = this.nana.flipX ? -1 : 1;
     const bx = this.nana.x + dir * 20;
     const by = this.nana.y;
     const ball = this.add.image(bx, by, 'crystal_ball');
