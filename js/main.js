@@ -7,8 +7,12 @@ const config = {
   height: 480,
   parent: 'game-container',
   backgroundColor: '#0a0a2e',
-  pixelArt: true,          // 像素精靈模式，避免模糊
-  roundPixels: true,       // 四捨五入像素位置，畫面更銳利
+  pixelArt: true,          // 像素精靈模式
+  roundPixels: true,       // 畫面更銳利
+  scale: {
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH
+  },
   physics: {
     default: 'arcade',
     arcade: {

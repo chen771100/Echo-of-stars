@@ -131,6 +131,16 @@ class GameScene extends Phaser.Scene {
     this.keyZ = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Z);
     this.keyESC = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
 
+    // ── 觸控虛擬按鍵 ──
+    this.touchLeft = false;
+    this.touchRight = false;
+    this.touchJump = false;
+    this.touchShoot = false;
+    const isTouch = this.sys.game.device.input.touch;
+    if (isTouch) {
+      this.createVirtualDPad();
+    }
+
     // ── 狀態 ──
     this.canDoubleJump = false;
     this.hasDoubleJumped = false;
@@ -174,11 +184,15 @@ class GameScene extends Phaser.Scene {
     }
     if (onGround) this.airFrameCount = 0;
 
-    // ── 娜娜移動 ──
-    if (this.cursors.left.isDown) {
+    // ── 娜娜移動（鍵盤 + 觸控）──
+    const leftDown  = this.cursors.left.isDown  || this.touchLeft;
+    const rightDown = this.cursors.right.isDown || this.touchRight;
+    const jumpDown  = this.cursors.up.isDown    || this.keyW.isDown || this.touchJump;
+
+    if (leftDown) {
       body.setVelocityX(-speed);
       this.nana.setFlipX(true);   // 左移：翻轉朝左
-    } else if (this.cursors.right.isDown) {
+    } else if (rightDown) {
       body.setVelocityX(speed);
       this.nana.setFlipX(false);  // 右移：維持朝右
     } else {
@@ -202,8 +216,9 @@ class GameScene extends Phaser.Scene {
       }
     }
 
-    // ── 娜娜跳躍 + 二段跳 ──
-    if (Phaser.Input.Keyboard.JustDown(this.cursors.up) || Phaser.Input.Keyboard.JustDown(this.keyW)) {
+    // ── 娜娜跳躍 + 二段跳（鍵盤 + 觸控）──
+    if (Phaser.Input.Keyboard.JustDown(this.cursors.up) || Phaser.Input.Keyboard.JustDown(this.keyW) || this.touchJumpTrigger) {
+      this.touchJumpTrigger = false;
       if (onGround) {
         body.setVelocityY(-400);
       } else if (this.canDoubleJump && !this.hasDoubleJumped) {
@@ -269,8 +284,9 @@ class GameScene extends Phaser.Scene {
       bubuBody.setVelocity(0, 0);
     }
 
-    // ── Z 鍵魔法彈 ──
-    if (Phaser.Input.Keyboard.JustDown(this.keyZ)) {
+    // ── Z 鍵 / 觸控 魔法彈 ──
+    if (Phaser.Input.Keyboard.JustDown(this.keyZ) || this.touchShootTrigger) {
+      this.touchShootTrigger = false;
       this.shootMagic();
     }
     // ── ESC 暫停 ──
@@ -278,8 +294,40 @@ class GameScene extends Phaser.Scene {
       this.scene.pause();
     }
   }
+  // ── 虛擬 D-Pad（觸控用）──
+  createVirtualDPad() {
+    const btnAlpha = 0.35;
+    const btnColor = 0xd5a6e8;
+    const btnSize = 48;
+    this.btnLeft   = this.add.circle(60, 420, btnSize, btnColor, btnAlpha).setScrollFactor(0).setDepth(100);
+    this.btnRight  = this.add.circle(160, 420, btnSize, btnColor, btnAlpha).setScrollFactor(0).setDepth(100);
+    this.btnJump   = this.add.circle(740, 380, btnSize, btnColor, btnAlpha).setScrollFactor(0).setDepth(100);
+    this.btnShoot  = this.add.circle(770, 300, btnSize/1.3, btnColor, btnAlpha).setScrollFactor(0).setDepth(100);
 
-  createJumpEffect(x, y) {
+    // 標示文字
+    const style = { fontSize: '20px', fill: '#ffffff', fontFamily: 'monospace' };
+    this.add.text(60, 420, '◀', style).setOrigin(0.5).setScrollFactor(0).setDepth(101);
+    this.add.text(160, 420, '▶', style).setOrigin(0.5).setScrollFactor(0).setDepth(101);
+    this.add.text(740, 380, '▲', style).setOrigin(0.5).setScrollFactor(0).setDepth(101);
+    this.add.text(770, 300, '⚡', { fontSize: '16px', fill: '#ffd700', fontFamily: 'monospace' }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
+
+    // 觸控事件
+    this.input.on('pointerdown', (pointer) => {
+      const x = pointer.x, y = pointer.y;
+      if (Phaser.Math.Distance.Between(x, y, 60, 420) < btnSize) this.touchLeft = true;
+      if (Phaser.Math.Distance.Between(x, y, 160, 420) < btnSize) this.touchRight = true;
+      if (Phaser.Math.Distance.Between(x, y, 740, 380) < btnSize) { this.touchJump = true; this.touchJumpTrigger = true; }
+      if (Phaser.Math.Distance.Between(x, y, 770, 300) < btnSize/1.3) { this.touchShootTrigger = true; }
+    });
+    this.input.on('pointerup', () => {
+      // 放開手指→重置所有觸控狀態
+      this.touchLeft = false;
+      this.touchRight = false;
+      this.touchJump = false;
+    });
+  }
+
+(x, y) {
     for (let i = 0; i < 6; i++) {
       const p = this.add.image(x, y, 'particle');
       p.setTint(0xd5a6e8);
