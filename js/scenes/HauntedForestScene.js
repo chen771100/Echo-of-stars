@@ -71,15 +71,18 @@ class HauntedForestScene extends Phaser.Scene {
     this.beaconConfigs = [];
     this.gates = [];
 
-    // 閘門1
-    this.setupBeaconGroup(500, [
-      { x: 430, y: 370, char: 'nana' },
-      { x: 570, y: 370, char: 'bubu' },
+    // 第一道閘門 (x=450): 阻擋前往第二區
+    this.addBeaconPlatform(400, 340); // 燈塔平台
+    this.setupBeaconGroup(450, [
+      { x: 370, y: 298, char: 'nana' },
+      { x: 430, y: 298, char: 'bubu' },
     ]);
-    // 閘門2
-    this.setupBeaconGroup(1000, [
-      { x: 930, y: 300, char: 'nana' },
-      { x: 1070, y: 300, char: 'bubu' },
+
+    // 第二道閘門 (x=850): 阻擋前往第三區
+    this.addBeaconPlatform(800, 310);
+    this.setupBeaconGroup(850, [
+      { x: 770, y: 268, char: 'nana' },
+      { x: 830, y: 268, char: 'bubu' },
     ]);
 
     // ── 收集品（will_o_wisp = 64x64 原生）──
@@ -155,6 +158,15 @@ class HauntedForestScene extends Phaser.Scene {
     // ── 相機 ──
     this.cameras.main.startFollow(this.nana, true, 0.1, 0.1);
     this.cameras.main.setBounds(0, 0, 1440, 480);
+
+    // ── HUD 提示 ──
+    this.beaconHint = this.add.text(720, 460, '🏮 帶對應角色靠近燈塔即可點亮', {
+      fontSize: '11px', fill: '#aaccaa', fontFamily: 'monospace', backgroundColor: '#1a2a1acc', padding: { x: 6, y: 3 }
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(99).setAlpha(0.8);
+
+    this.beaconStatus = this.add.text(720, 12, '🏮 燈塔: 0/4  鬼火: 5', {
+      fontSize: '10px', fill: '#88ff88', fontFamily: 'monospace', backgroundColor: '#1a2a1a88', padding: { x: 4, y: 2 }
+    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(99);
   }
 
   setupCharacters(char) {
@@ -164,11 +176,18 @@ class HauntedForestScene extends Phaser.Scene {
     char.setDepth(10);
   }
 
-  // ── 燈塔閘門 ──
+  // ── 燈塔系統 ──
+  addBeaconPlatform(x, y) {
+    this.platforms.create(x, y, 'forest_platform');
+  }
+
   setupBeaconGroup(gateX, beacons) {
-    // 閘門：用平台當門
-    const gate = this.platforms.create(gateX, 240, 'forest_platform');
-    gate.setDepth(8);
+    // 閘門（上段 + 下段，擋住整個高度）
+    const gate1 = this.platforms.create(gateX, 240, 'forest_platform');
+    gate1.setDepth(8);
+    const gate2 = this.platforms.create(gateX, 380, 'forest_platform');
+    gate2.setDepth(8);
+    const gate = gate1; // 用 gate1 來控制開關
 
     // 燈塔標記
     beacons.forEach(b => {
@@ -188,13 +207,13 @@ class HauntedForestScene extends Phaser.Scene {
     });
 
     this.beaconConfigs.push({ gateX, beacons, opened: false });
-    this.gates.push(gate);
+    this.gates.push([gate1, gate2]);
   }
 
   updateBeacons() {
     this.beaconConfigs.forEach((cfg, gi) => {
       if (cfg.opened) return;
-      const gate = this.gates[gi];
+      const gates = this.gates[gi];
       let allLit = true;
 
       cfg.beacons.forEach(b => {
@@ -210,10 +229,20 @@ class HauntedForestScene extends Phaser.Scene {
 
       if (allLit) {
         cfg.opened = true;
-        this.tweens.add({
-          targets: gate, alpha: 0, duration: 600,
-          onComplete: () => { gate.body.enable = false; gate.setVisible(false); },
+        let litCount = 0;
+        cfg.beacons.forEach(b => { if (b.lit) litCount++; });
+        this.beaconStatus.setText(`🏮 燈塔: ${litCount}/4  鬼火: ${this.stars.countActive()}`);
+        gates.forEach(gate => {
+          this.tweens.add({
+            targets: gate, alpha: 0, duration: 600,
+            onComplete: () => { gate.body.enable = false; gate.setVisible(false); },
+          });
         });
+      } else {
+        // 更新 HUD
+        let litCount = 0;
+        cfg.beacons.forEach(b => { if (b.lit) litCount++; });
+        this.beaconStatus.setText(`🏮 燈塔: ${litCount}/4  鬼火: ${this.stars.countActive()}`);
       }
     });
   }
@@ -257,6 +286,11 @@ class HauntedForestScene extends Phaser.Scene {
   // ── 收集鬼火 ──
   collectWisp(char, star) {
     star.destroy();
+    if (this.beaconStatus) {
+      let litCount = 0;
+      this.beaconConfigs.forEach(c => c.beacons.forEach(b => { if (b.lit) litCount++; }));
+      this.beaconStatus.setText(`🏮 燈塔: ${litCount}/4  鬼火: ${this.stars.countActive()}`);
+    }
     if (this.stars.countActive() === 0) {
       this.fogRt.clear();
       this.add.rectangle(720, 240, 1440, 480, 0x000000, 0.7).setDepth(90);
