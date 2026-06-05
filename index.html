@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>星靈迴響：Nana & 布布</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a1a;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+    #game-container {
+      border: 2px solid #6b2fa0;
+      box-shadow: 0 0 30px rgba(107, 47, 160, 0.4);
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container"></div>
+  <script src="node_modules/phaser/dist/phaser.min.js"></script>
+  <script src="js/scenes/BootScene.js?v=1"></script>
+  <script src="js/scenes/GameScene.js?v=1"></script>
+  <script src="js/main.js?v=1"></script>
+</body>
+</html>
