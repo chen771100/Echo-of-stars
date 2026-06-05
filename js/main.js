@@ -11,7 +11,8 @@ const config = {
   roundPixels: true,       // 畫面更銳利
   scale: {
     mode: Phaser.Scale.FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+    autoRound: true
   },
   physics: {
     default: 'arcade',
