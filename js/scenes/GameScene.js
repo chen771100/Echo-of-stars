@@ -137,7 +137,7 @@ class GameScene extends Phaser.Scene {
     this.touchJump = false;
     this.touchShoot = false;
     this.touchPadVisible = false;
-    this.touchPadGroup = null;
+    this._padObjects = null;
     const isTouch = this.sys.game.device.input.touch;
     // 切換按鈕（齒輪）
     this.togglePadBtn = this.add.circle(806, 16, 12, 0x9b59b6, 0.6).setScrollFactor(0).setDepth(200).setInteractive();
@@ -147,8 +147,8 @@ class GameScene extends Phaser.Scene {
       if (this.touchPadVisible) this.createVirtualDPad();
       else this.destroyVirtualDPad();
     });
-    // 觸控裝置自動啟用
-    if (isTouch) {
+    // 觸控裝置或設定已啟用才自動開
+    if (isTouch || this._padEnabled) {
       this.touchPadVisible = true;
       this.createVirtualDPad();
     }
@@ -308,31 +308,25 @@ class GameScene extends Phaser.Scene {
   }
   // ── 虛擬 D-Pad（觸控用）──
   createVirtualDPad() {
-    if (this.touchPadGroup) this.destroyVirtualDPad();
-    this.touchPadGroup = this.add.group();
+    if (this._padObjects && this._padObjects.length > 0) return;
+    this._padObjects = [];
     const btnAlpha = 0.35;
     const btnColor = 0xd5a6e8;
     const btnSize = 48;
-    const pad = this.touchPadGroup;
+    const add = (o) => { this._padObjects.push(o); return o; };
 
-    const bL = pad.create(60, 420, this.add.circle(0, 0, btnSize, btnColor, btnAlpha));
-    bL.setScrollFactor(0).setDepth(100);
-    const bR = pad.create(160, 420, this.add.circle(0, 0, btnSize, btnColor, btnAlpha));
-    bR.setScrollFactor(0).setDepth(100);
-    const bJ = pad.create(740, 380, this.add.circle(0, 0, btnSize, btnColor, btnAlpha));
-    bJ.setScrollFactor(0).setDepth(100);
-    const bS = pad.create(770, 300, this.add.circle(0, 0, btnSize/1.3, btnColor, btnAlpha));
-    bS.setScrollFactor(0).setDepth(100);
+    add(this.add.circle(60, 420, btnSize, btnColor, btnAlpha).setScrollFactor(0).setDepth(100));
+    add(this.add.circle(160, 420, btnSize, btnColor, btnAlpha).setScrollFactor(0).setDepth(100));
+    add(this.add.circle(740, 380, btnSize, btnColor, btnAlpha).setScrollFactor(0).setDepth(100));
+    add(this.add.circle(770, 300, btnSize/1.3, btnColor, btnAlpha).setScrollFactor(0).setDepth(100));
 
-    // 標示文字
     const style = { fontSize: '20px', fill: '#ffffff', fontFamily: 'monospace' };
-    const tL = pad.create(60, 420, this.add.text(0, 0, '◀', style)); tL.setOrigin(0.5).setScrollFactor(0).setDepth(101);
-    const tR = pad.create(160, 420, this.add.text(0, 0, '▶', style)); tR.setOrigin(0.5).setScrollFactor(0).setDepth(101);
-    const tJ = pad.create(740, 380, this.add.text(0, 0, '▲', style)); tJ.setOrigin(0.5).setScrollFactor(0).setDepth(101);
-    const tS = pad.create(770, 300, this.add.text(0, 0, '⚡', { fontSize: '16px', fill: '#ffd700', fontFamily: 'monospace' }));
-    tS.setOrigin(0.5).setScrollFactor(0).setDepth(101);
+    add(this.add.text(60, 420, '◀', style).setOrigin(0.5).setScrollFactor(0).setDepth(101));
+    add(this.add.text(160, 420, '▶', style).setOrigin(0.5).setScrollFactor(0).setDepth(101));
+    add(this.add.text(740, 380, '▲', style).setOrigin(0.5).setScrollFactor(0).setDepth(101));
+    add(this.add.text(770, 300, '⚡', { fontSize: '16px', fill: '#ffd700', fontFamily: 'monospace' }).setOrigin(0.5).setScrollFactor(0).setDepth(101));
 
-    // 觸控事件（僅一次）
+    // 觸控事件（只綁一次）
     if (!this._touchEventsBound) {
       this._touchEventsBound = true;
       this.input.on('pointerdown', (pointer) => {
@@ -352,9 +346,9 @@ class GameScene extends Phaser.Scene {
   }
 
   destroyVirtualDPad() {
-    if (this.touchPadGroup) {
-      this.touchPadGroup.clear(true, true);
-      this.touchPadGroup = null;
+    if (this._padObjects) {
+      this._padObjects.forEach(o => o.destroy());
+      this._padObjects = null;
     }
     this.touchLeft = false;
     this.touchRight = false;
