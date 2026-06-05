@@ -754,8 +754,21 @@ class CrystalCavernScene extends Phaser.Scene {
       targets: text, scaleX: 1.1, scaleY: 1.1,
       duration: 800, yoyo: true, repeat: -1
     });
-    this.time.delayedCall(2500, () => {
-      this.scene.start('HauntedForestScene');
-    });
+
+    // 選關按鈕
+    const menuBtn = this.add.text(416, 310, '📋 選關卡', {
+      fontSize: '18px', fill: '#44ddff', fontFamily: 'monospace', backgroundColor: '#1a3a5a', padding: { x: 12, y: 6 }
+    }).setOrigin(0.5).setDepth(91).setInteractive({ useHandCursor: true });
+    menuBtn.on('pointerdown', () => this.scene.start('LevelSelectScene'));
+    menuBtn.on('pointerover', () => menuBtn.setStyle({ fill: '#ffffff' }));
+    menuBtn.on('pointerout', () => menuBtn.setStyle({ fill: '#44ddff' }));
+
+    // 下一關按鈕
+    const nextBtn = this.add.text(416, 360, '➡ 下一關：幽靈森林', {
+      fontSize: '16px', fill: '#66ff88', fontFamily: 'monospace', backgroundColor: '#1a4a2a', padding: { x: 12, y: 6 }
+    }).setOrigin(0.5).setDepth(91).setInteractive({ useHandCursor: true });
+    nextBtn.on('pointerdown', () => this.scene.start('HauntedForestScene'));
+    nextBtn.on('pointerover', () => nextBtn.setStyle({ fill: '#ffffff' }));
+    nextBtn.on('pointerout', () => nextBtn.setStyle({ fill: '#66ff88' }));
   }
 }

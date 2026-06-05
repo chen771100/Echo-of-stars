@@ -66,7 +66,7 @@ class BootScene extends Phaser.Scene {
     this.createStarTexture();
     this.createParticleTexture();
 
-    this.scene.start('GameScene');
+    this.scene.start('LevelSelectScene');
   }
 
   // ── 水晶球 ──

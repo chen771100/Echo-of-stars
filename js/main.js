@@ -21,7 +21,7 @@ const config = {
       debug: false
     }
   },
-  scene: [BootScene, GameScene, CrystalCavernScene, HauntedForestScene]
+  scene: [BootScene, LevelSelectScene, GameScene, CrystalCavernScene, HauntedForestScene]
 };
 
 const game = new Phaser.Game(config);
