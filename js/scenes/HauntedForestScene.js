@@ -349,6 +349,7 @@ class HauntedForestScene extends Phaser.Scene {
     const isNana = this.activeChar === 'nana';
     const body = active.body;
     const onGround = body.blocked.down || body.touching.down;
+    if (onGround) this.hasDoubleJumped = false;
 
     if (this.switchCooldown > 0) this.switchCooldown--;
 
