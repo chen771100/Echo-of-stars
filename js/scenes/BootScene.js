@@ -46,6 +46,10 @@ class BootScene extends Phaser.Scene {
       g.fillStyle(0xd5a6e8);
       g.fillCircle(2, 2, 2);
     });
+    this.genTexture('particle', 6, 6, (g) => {
+      g.fillStyle(0xd5a6e8);
+      g.fillCircle(3, 3, 3);
+    });
 
     // ══ 第一關：星雲森林 ══
     // 平台 64x16（紫色石頭風格）
