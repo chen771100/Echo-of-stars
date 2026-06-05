@@ -616,6 +616,11 @@ class GameScene extends Phaser.Scene {
     star.destroy();
     this.score++;
     this.scoreText.setText(`星靈碎片: ${this.score} / 3`);
+    if (this.score >= 3) {
+      this.time.delayedCall(1000, () => {
+        this.scene.start('CrystalCavernScene');
+      });
+    }
 
     this.createJumpEffect(star.x, star.y);
     for (let i = 0; i < 8; i++) {

@@ -720,6 +720,11 @@ class CrystalCavernScene extends Phaser.Scene {
     shard.destroy();
     this.score++;
     this.scoreText.setText(`💠 水晶碎片: ${this.score} / 3`);
+    if (this.score >= 3) {
+      this.time.delayedCall(1000, () => {
+        this.scene.start('HauntedForestScene');
+      });
+    }
 
     this.createJumpEffect(shard.x, shard.y);
     for (let i = 0; i < 8; i++) {
