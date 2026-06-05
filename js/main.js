@@ -20,7 +20,7 @@ const config = {
       debug: false
     }
   },
-  scene: [BootScene, GameScene]
+  scene: [BootScene, GameScene, CrystalCavernScene, HauntedForestScene]
 };
 
 const game = new Phaser.Game(config);

@@ -1,101 +1,107 @@
-// GameScene — 主要遊戲場景（動畫版）
+// CrystalCavernScene — 💎 水晶洞窟（第二關）
+// 向下探索型關卡，特色：崩塌平台 + 冰晶收集
 
-class GameScene extends Phaser.Scene {
+class CrystalCavernScene extends Phaser.Scene {
   constructor() {
-    super({ key: 'GameScene' });
+    super({ key: 'CrystalCavernScene' });
   }
 
   create() {
-    // ── 角色縮放比例（新 sprites 160x178，適合 832x480 的世界）──
+    // ── 角色縮放 ──
     this.CHAR_SCALE = 0.5;
 
-    // ── 星空背景 ──
-    this.add.image(416, -80, 'night_sky_bg')
+    // ── 水晶洞窟背景 ──
+    this.add.image(416, 240, 'cavern_bg')
       .setScrollFactor(0.3)
-      .setDepth(0)
-      .setAlpha(0.6);
-
-    // ── 背景裝飾星星 ──
-    for (let i = 0; i < 60; i++) {
-      const star = this.add.image(
-        Phaser.Math.Between(0, 832),
-        Phaser.Math.Between(-300, 480),
-        'star'
-      );
-      star.setAlpha(Phaser.Math.FloatBetween(0.2, 0.8));
-      star.setScale(Phaser.Math.FloatBetween(0.3, 1));
-    }
-
-    // ── 魔法粒子背景動畫 ──
-    for (let i = 0; i < 25; i++) {
+      .setDepth(0);
+      for (let i = 0; i < 30; i++) {
       const p = this.add.image(
         Phaser.Math.Between(0, 832),
-        Phaser.Math.Between(-300, 480),
-        'particle'
+        Phaser.Math.Between(-50, 580),
+        'ice_particle'
       );
-      p.setAlpha(0.4);
+      p.setAlpha(Phaser.Math.FloatBetween(0.2, 0.6));
       p.setScale(Phaser.Math.FloatBetween(0.5, 1.5));
+      p.setTint(0x88ddff);
       this.tweens.add({
         targets: p,
-        y: p.y - Phaser.Math.Between(50, 150),
+        y: p.y + Phaser.Math.Between(30, 80),
         alpha: 0,
-        duration: Phaser.Math.Between(2000, 4000),
+        duration: Phaser.Math.Between(3000, 5000),
         repeat: -1,
         delay: Phaser.Math.Between(0, 2000)
       });
     }
 
+    // 背景水晶柱裝飾
+    for (let i = 0; i < 8; i++) {
+      const pillar = this.add.rectangle(
+        Phaser.Math.Between(20, 800),
+        Phaser.Math.Between(-30, 550),
+        8, Phaser.Math.Between(40, 120),
+        0x3366aa, 0.2
+      );
+      this.tweens.add({
+        targets: pillar,
+        alpha: 0.4,
+        duration: Phaser.Math.Between(2000, 4000),
+        yoyo: true,
+        repeat: -1
+      });
+    }
+
     // ── 平台群組 ──
     this.platforms = this.physics.add.staticGroup();
+    // 崩塌平台群組
+    this.crackedPlatforms = this.physics.add.staticGroup();
 
-    // 地面平台
-    const ground = this.platforms.create(416, 464, 'platform');
-    ground.setScale(832 / 64, 1).refreshBody();
+    // 入口高處平台
+    const ground = this.platforms.create(416, 140, 'crystal_platform');
     ground.setDisplaySize(832, 16);
+    ground.refreshBody();
 
-    // 星雲森林關卡平台（重新設計：確保走路不撞頭、跳躍可到達）
-    // 地面表面 y=456，平台 64×16，角色最小行走間距需 90px
+    // 間距拉大到 130px（跳得下也跳得上）
+    // 按下鍵可以穿過平台往下掉
     const levelData = [
-      // ── 第一層（單跳從地面可到）──
-      { x: 300, y: 366 },
-      { x: 500, y: 366 },
-      { x: 680, y: 368 },
+      // 第一階
+      { x: 150, y: 270, cracked: false },
+      { x: 350, y: 270, cracked: true },
+      { x: 550, y: 270, cracked: false },
 
-      // ── 第二層 ──
-      { x: 200, y: 262 },
-      { x: 400, y: 260 },
-      { x: 600, y: 261 },
+      // 第二階
+      { x: 200, y: 400, cracked: false },
+      { x: 400, y: 400, cracked: true },
+      { x: 600, y: 400, cracked: false },
 
-      // ── 第三層 ──
-      { x: 100, y: 158 },
-      { x: 350, y: 156 },
-      { x: 550, y: 157 },
-
-      // ── 頂層 ──
-      { x: 250, y: 54 },
-      { x: 500, y: 52 },
-
-      // ── 輔助通道 ──
-      { x: 700, y: 156 },
-      { x: 700, y: 262 },
+      // 最底層
+      { x: 250, y: 492, cracked: false },
+      { x: 550, y: 492, cracked: false },
     ];
 
     levelData.forEach(d => {
-      const p = this.platforms.create(d.x, d.y, 'platform');
+      const textureKey = d.cracked ? 'cracked_platform' : 'crystal_platform';
+      const p = this.platforms.create(d.x, d.y, textureKey);
+      p.setDisplaySize(64, 16);  // 原圖 128×32，顯示為 64×16
       p.refreshBody();
+      // 崩塌平台標記
+      if (d.cracked) {
+        p.setData('cracked', true);
+        p.setData('touched', false);
+        p.setData('collapseTimer', 0);
+      }
     });
 
-    // ── 收集品：星靈碎片 ──
+    // ── 收集品：水晶碎片 ──
     this.stars = this.physics.add.staticGroup();
-    const starPositions = [
-      { x: 250, y: 34 },   // 從頂層 (250,54) 跳一下可拿到
-      { x: 500, y: 32 },   // 從頂層 (500,52) 跳一下可拿到
-      { x: 700, y: 136 },  // 從第三層 (700,156) 跳一下可拿到
+    const shardPositions = [
+      { x: 350, y: 260 },   // 第一階崩塌平台旁邊
+      { x: 400, y: 390 },   // 第二階崩塌平台旁邊
+      { x: 550, y: 482 },   // 最底層
     ];
-    starPositions.forEach(pos => {
-      const s = this.stars.create(pos.x, pos.y, 'star');
-      s.setScale(1.5);
-      s.setTint(0xffd700);
+    shardPositions.forEach(pos => {
+      const s = this.stars.create(pos.x, pos.y, 'crystal_shard');
+      s.setScale(0.75);  // 原圖 16×16，顯示 12×12（跟第一關的星星差不多大）
+      s.setTint(0x44ddff);
       this.tweens.add({
         targets: s,
         scaleX: 2,
@@ -106,21 +112,28 @@ class GameScene extends Phaser.Scene {
       });
     });
 
-    // ── 娜娜（動畫 sprite）──
-    // 初始站在地面：地面 surface = 456，角色腳底放在地面
-    this.nana = this.physics.add.sprite(100, 412, 'nana_sprites', 0);
+    // ── 角色 ──
+    // 角色
+    this.nana = this.physics.add.sprite(100, 88, 'nana_sprites', 0);
     this.nana.setScale(this.CHAR_SCALE);
     this.nana.setCollideWorldBounds(true);
-    this.nana.setFlipX(false);  // 新 spritesheet 預設朝右，無需翻轉
-    // body 等於 sprite 顯示尺寸，確保腳底對齊地面
+    this.nana.setFlipX(false);
     this.nana.body.setSize(160, 178);
     this.nana.body.setOffset(0, 0);
 
-    // 水晶球特效
-    this.crystalBall = this.add.image(120, 390, 'crystal_ball');
+    this.bubu = this.physics.add.sprite(70, 88, 'bubu_sprites', 0);
+    this.bubu.setScale(this.CHAR_SCALE);
+    this.bubu.setCollideWorldBounds(true);
+    this.bubu.setFlipX(false);
+    this.bubu.body.setSize(160, 164);
+    this.bubu.body.setOffset(0, 0);
+
+    // 水晶球跟隨娜娜
+    // 水晶球跟隨娜娜
+    this.crystalBall = this.add.image(120, 75, 'crystal_ball');
     this.tweens.add({
       targets: this.crystalBall,
-      y: 385,
+      y: 415,
       x: 125,
       duration: 1200,
       yoyo: true,
@@ -128,34 +141,33 @@ class GameScene extends Phaser.Scene {
       ease: 'Sine.easeInOut'
     });
 
-    // ── 布布（動畫 sprite）──
-    this.bubu = this.physics.add.sprite(70, 412, 'bubu_sprites', 0);
-    this.bubu.setScale(this.CHAR_SCALE);
-    this.bubu.setCollideWorldBounds(true);
-    this.bubu.setFlipX(false);  // 新 spritesheet 預設朝右
-    this.bubu.body.setSize(160, 164);
-    this.bubu.body.setOffset(0, 0);
+    // ── 碰撞設定（含穿過平台往下掉）──
+    this._nanaDrop = 0;
+    this._bubuDrop = 0;
+    this.physics.add.collider(this.nana, this.platforms, null, (nana, plat) => {
+      return this._nanaDrop <= 0;
+    });
+    this.physics.add.collider(this.bubu, this.platforms, null, (bubu, plat) => {
+      return this._bubuDrop <= 0;
+    });
+    this.physics.add.overlap(this.nana, this.stars, this.collectShard, null, this);
+    this.physics.add.overlap(this.bubu, this.stars, this.collectShard, null, this);
 
-    // ── 碰撞設定 ──
-    this.physics.add.collider(this.nana, this.platforms);
-    this.physics.add.collider(this.bubu, this.platforms);
-    this.physics.add.overlap(this.nana, this.stars, this.collectStar, null, this);
-    this.physics.add.overlap(this.bubu, this.stars, this.collectStar, null, this);
-
-    // ── 按鍵輸入 ──
+    // ── 按鍵 ──
     this.cursors = this.input.keyboard.createCursorKeys();
+    this.keyS = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S); // 往下掉
     this.keyW = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W);
     this.keyZ = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Z);
     this.keyESC = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
-    this.keyQ = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Q);  // 切角色
+    this.keyQ = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
     this.key1 = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ONE);
     this.key2 = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TWO);
 
     // ── 雙角色系統 ──
-    this.activeChar = 'nana';       // 'nana' 或 'bubu'
+    this.activeChar = 'nana';
     this.switchCooldown = 0;
 
-    // ── 觸控虛擬按鍵 ──
+    // ── 觸控 ──
     this.touchLeft = false;
     this.touchRight = false;
     this.touchJump = false;
@@ -163,61 +175,62 @@ class GameScene extends Phaser.Scene {
     this.touchShootTrigger = false;
     this.touchJumpTrigger = false;
     this.touchSwitchTrigger = false;
+    this.touchDownTrigger = false;
     this.touchPadVisible = false;
     this._padObjects = null;
     const isTouch = this.sys.game.device.input.touch;
-    // 切換按鈕（齒輪）
-    this.togglePadBtn = this.add.circle(806, 16, 12, 0x9b59b6, 0.6).setScrollFactor(0).setDepth(200).setInteractive();
+    this.togglePadBtn = this.add.circle(806, 16, 12, 0x4488cc, 0.6).setScrollFactor(0).setDepth(200).setInteractive();
     this.add.text(806, 16, '⚙', { fontSize: '14px', fill: '#fff', fontFamily: 'monospace' }).setOrigin(0.5).setScrollFactor(0).setDepth(201);
     this.togglePadBtn.on('pointerdown', () => {
       this.touchPadVisible = !this.touchPadVisible;
       if (this.touchPadVisible) this.createVirtualDPad();
       else this.destroyVirtualDPad();
     });
-    // 觸控裝置或設定已啟用才自動開
     if (isTouch || this._padEnabled) {
       this.touchPadVisible = true;
       this.createVirtualDPad();
     }
 
-    // ── 狀態 ──
+    // ── 角色狀態 ──
     this.canDoubleJump = false;
     this.hasDoubleJumped = false;
     this.score = 0;
-    this.wasOnGround = true;  // 地面滯後用
-    this.landingCooldowns = {};  // 落地塵埃冷卻
-    this.dashCooldown = 0;       // 衝刺冷卻
-    this.jumpBufferTimer = 0;    // 跳躍緩衝幀數
-    this.followerJumpCooldown = 0; // AI 跳躍冷卻
+    this.wasOnGround = true;
+    this.landingCooldowns = {};
+    this.dashCooldown = 0;
+    this.jumpBufferTimer = 0;
+    this.followerJumpCooldown = 0;
 
     // ── UI ──
-    this.scoreText = this.add.text(16, 16, '星靈碎片: 0 / 3', {
-      fontSize: '16px', fill: '#d5a6e8', fontFamily: 'monospace'
+    this.scoreText = this.add.text(16, 16, '💠 水晶碎片: 0 / 3', {
+      fontSize: '16px', fill: '#88ddff', fontFamily: 'monospace'
     });
-    this.titleText = this.add.text(416, 16, '星雲森林', {
-      fontSize: '14px', fill: '#9b59b6', fontFamily: 'monospace'
+    this.titleText = this.add.text(416, 16, '💎 水晶洞窟', {
+      fontSize: '14px', fill: '#4499cc', fontFamily: 'monospace'
     }).setOrigin(0.5, 0);
 
     // 角色切換指示器
     this.charSwitchText = this.add.text(700, 16, '▸ 娜娜  ◇ 布布', {
-      fontSize: '12px', fill: '#d5a6e8', fontFamily: 'monospace', backgroundColor: '#1a0a3e88', padding: { x: 6, y: 2 }
+      fontSize: '12px', fill: '#88ddff', fontFamily: 'monospace', backgroundColor: '#0a0a3e88', padding: { x: 6, y: 2 }
     });
     this.charSwitchBtn = this.add.text(760, 36, '［Q/1/2 切換］', {
-      fontSize: '10px', fill: '#9b59b6', fontFamily: 'monospace'
+      fontSize: '10px', fill: '#4499cc', fontFamily: 'monospace'
     });
 
     // 衝刺冷卻條
-    this.dashStatusBg = this.add.rectangle(16, 56, 100, 8, 0x333355, 0.6).setOrigin(0, 0.5);
-    this.dashStatusBar = this.add.rectangle(16, 56, 100, 8, 0x9b59b6, 1).setOrigin(0, 0.5);
+    this.dashStatusBg = this.add.rectangle(16, 56, 100, 8, 0x1a1a4e, 0.6).setOrigin(0, 0.5);
+    this.dashStatusBar = this.add.rectangle(16, 56, 100, 8, 0x4488cc, 1).setOrigin(0, 0.5);
     this.dashStatusText = this.add.text(120, 56, '衝刺', {
-      fontSize: '10px', fill: '#9b59b6', fontFamily: 'monospace'
+      fontSize: '10px', fill: '#4488cc', fontFamily: 'monospace'
     }).setOrigin(0, 0.5);
 
-    // ── 相機 ──
+    // ── 相機（往下探索，跟上角色）──
     this.cameras.main.startFollow(this.nana, true, 0.1, 0.1);
-    // 放寬世界邊界，讓上方平台和星星都看得見
-    this.cameras.main.setBounds(0, -300, 832, 780);
-    this.physics.world.setBounds(0, -300, 832, 780);
+    this.cameras.main.setBounds(0, -50, 832, 600);
+    this.physics.world.setBounds(0, -50, 832, 600);
+
+    // ── 崩塌平台狀態記錄 ──
+    this._crackingPlatforms = []; // 正在崩塌中的平台
 
     this.gameWon = false;
   }
@@ -226,7 +239,7 @@ class GameScene extends Phaser.Scene {
     if (this.gameWon) return;
 
     const speed = 200;
-    const dashCooldownFrames = 60; // ~1 秒
+    const dashCooldownFrames = 60;
 
     // ── 冷卻計時器 ──
     if (this.switchCooldown > 0) this.switchCooldown--;
@@ -234,11 +247,14 @@ class GameScene extends Phaser.Scene {
     if (this.jumpBufferTimer > 0) this.jumpBufferTimer--;
     if (this.followerJumpCooldown > 0) this.followerJumpCooldown--;
 
+    // ── 崩塌平台邏輯 ──
+    this.updateCrackingPlatforms();
+
     // ── 控制角色 ──
     let active = (this.activeChar === 'nana') ? this.nana : this.bubu;
     let isNana = (active === this.nana);
 
-    // ── 角色切換（Q / 1,2）──
+    // ── 角色切換 ──
     const wantSwitch = Phaser.Input.Keyboard.JustDown(this.keyQ)
       || Phaser.Input.Keyboard.JustDown(this.key1)
       || Phaser.Input.Keyboard.JustDown(this.key2)
@@ -253,20 +269,15 @@ class GameScene extends Phaser.Scene {
       this.airFrameCount = 0;
       this.jumpBufferTimer = 0;
 
-      // 切換時清除速度
-      this.nana.body.setVelocity(0, 0);
-      this.bubu.body.setVelocity(0, 0);
-
-      // 更新指示器
-      this.charSwitchText.setText(
-        this.activeChar === 'nana' ? '▸ 娜娜  ◇ 布布' : '◇ 娜娜  ▸ 布布'
-      );
-
-      // 更新 active 指向
       active = (this.activeChar === 'nana') ? this.nana : this.bubu;
       isNana = (active === this.nana);
 
-      // ✨ 角色切換特效
+      this.nana.body.setVelocity(0, 0);
+      this.bubu.body.setVelocity(0, 0);
+
+      this.charSwitchText.setText(
+        this.activeChar === 'nana' ? '▸ 娜娜  ◇ 布布' : '◇ 娜娜  ▸ 布布'
+      );
       this.createSwitchEffect(active);
     }
 
@@ -281,25 +292,17 @@ class GameScene extends Phaser.Scene {
       this.canDoubleJump = true;
       this.hasDoubleJumped = false;
       this.wasOnGround = true;
-    } else {
-      if (this.wasOnGround) {
-        this.airFrameCount = (this.airFrameCount || 0) + 1;
-        if (this.airFrameCount > 3) this.wasOnGround = false;
-      }
-    }
-    if (onGround) {
       this.airFrameCount = 0;
       this._justLeftGround = false;
     } else if (this.wasOnGround) {
       this._justLeftGround = true;
     }
-
-    // 離開地面時設緩衝（6 幀內按跳仍算地面跳）
+    if (onGround) this.airFrameCount = 0;
     if (this._justLeftGround && this.airFrameCount === 1) {
       this.jumpBufferTimer = 6;
     }
 
-    // 🎯 落地塵埃效果
+    // 🎯 落地塵埃
     if (justLanded) {
       const ck = isNana ? 'nana' : 'bubu';
       if (!this.landingCooldowns[ck]) {
@@ -309,7 +312,7 @@ class GameScene extends Phaser.Scene {
       }
     }
 
-    // ── 移動（鍵盤 + 觸控）──
+    // ── 移動 ──
     const leftDown  = this.cursors.left.isDown  || this.touchLeft;
     const rightDown = this.cursors.right.isDown || this.touchRight;
 
@@ -323,7 +326,7 @@ class GameScene extends Phaser.Scene {
       activeBody.setVelocityX(0);
     }
 
-    // ── 動畫切換 ──
+    // ── 動畫 ──
     const cur = active.anims.currentAnim?.key;
     const runAnim  = isNana ? 'nana_run'  : 'bubu_run';
     const idleAnim = isNana ? 'nana_idle' : 'bubu_idle';
@@ -340,7 +343,7 @@ class GameScene extends Phaser.Scene {
       if (cur !== jumpAnim) active.play(jumpAnim);
     }
 
-    // ── 跳躍（含緩衝）──
+    // ── 跳躍 ──
     const jumpPressed = Phaser.Input.Keyboard.JustDown(this.cursors.up)
       || Phaser.Input.Keyboard.JustDown(this.keyW)
       || this.touchJumpTrigger;
@@ -358,22 +361,43 @@ class GameScene extends Phaser.Scene {
       }
     }
 
-    // ── 娜娜空中衝刺（Z 鍵）──
+    // ── 按 ↓/S 穿過平台往下掉 ──
+    // 兩個角色的掉落倒數都跑
+    if (this._nanaDrop > 0) this._nanaDrop--;
+    if (this._bubuDrop > 0) this._bubuDrop--;
+    if (isNana) {
+      if (onGround && (Phaser.Input.Keyboard.JustDown(this.cursors.down) || Phaser.Input.Keyboard.JustDown(this.keyS) || this.touchDownTrigger)) {
+        this.touchDownTrigger = false;
+        this._nanaDrop = 10;
+        activeBody.setVelocityY(100);
+        this._bubuDrop = 10;  // 布布也一起掉
+        this.bubu.body.setVelocityY(100);
+      }
+    } else {
+      if (onGround && (Phaser.Input.Keyboard.JustDown(this.cursors.down) || Phaser.Input.Keyboard.JustDown(this.keyS) || this.touchDownTrigger)) {
+        this.touchDownTrigger = false;
+        this._bubuDrop = 10;
+        activeBody.setVelocityY(100);
+        this._nanaDrop = 10;  // 娜娜也一起掉
+        this.nana.body.setVelocityY(100);
+      }
+    }
+
+    // ── 空中衝刺 ──
     if (isNana && !onGround && Phaser.Input.Keyboard.JustDown(this.keyZ) && this.dashCooldown === 0) {
       const dashDir = active.flipX ? -1 : 1;
       activeBody.setVelocityX(dashDir * 350);
       activeBody.setVelocityY(0);
       this.dashCooldown = dashCooldownFrames;
-      active.setTint(0xffffff);
       this.createJumpEffect(active.x, active.y);
     }
 
-    // 衝刺冷卻 UI
+    // 冷卻 UI
     const dashPct = this.dashCooldown / dashCooldownFrames;
     this.dashStatusBar.setDisplaySize(100 * (1 - dashPct), 8);
-    this.dashStatusBar.setFillStyle(dashPct > 0.5 ? 0x9b59b6 : dashPct > 0.2 ? 0xe67e22 : 0xe74c3c);
+    this.dashStatusBar.setFillStyle(dashPct > 0.5 ? 0x4488cc : dashPct > 0.2 ? 0xe67e22 : 0xe74c3c);
 
-    // ── 布布爬牆+滑翔 ──
+    // ── 布布爬牆 ──
     if (!isNana) {
       const touchingWall = activeBody.blocked.left || activeBody.blocked.right;
       if (touchingWall && !onGround) {
@@ -381,21 +405,19 @@ class GameScene extends Phaser.Scene {
         if ((wallDir === 'left' && leftDown) || (wallDir === 'right' && rightDown)) {
           activeBody.setVelocityY(-60);
           if (cur !== 'bubu_jump') active.play('bubu_jump');
-          // 🎯 爬牆摩擦粒子
           this.createWallDust(active.x, active.y, wallDir);
         }
-        // 滑翔
         if (activeBody.velocity.y > 0) {
           activeBody.setVelocityY(activeBody.velocity.y * 0.6);
         }
       }
     }
 
-    // ── 水晶球跟隨娜娜 ──
+    // ── 水晶球 ──
     this.crystalBall.x = this.nana.x + (this.nana.flipX ? 16 : -16);
     this.crystalBall.y = this.nana.y - 4;
 
-    // ── 相機跟隨控制角色 ──
+    // ── 相機 ──
     this.cameras.main.startFollow(active, true, 0.1, 0.1);
 
     // ── 非控制角色的 AI 跟隨 ──
@@ -412,7 +434,6 @@ class GameScene extends Phaser.Scene {
 
     if (follower._followState === undefined) follower._followState = 'idle';
 
-    // 跟隨距離邏輯
     if (distX > 60) {
       fBody.setVelocityX(150);
       follower.setFlipX(false);
@@ -437,24 +458,19 @@ class GameScene extends Phaser.Scene {
       }
     }
 
-    // 🎯 跟隨跳躍（精準：只跳當距離足夠跳到目標）
-    // 最高可跳 ~103px（單跳），所以目標高於目前位置 > 90 才跳
     if (distY < -90 && fGround && this.followerJumpCooldown === 0) {
       fBody.setVelocityY(-400);
       follower.play(fJump);
       this.followerJumpCooldown = 30;
     }
-    if (!fGround && fcu !== fJump) {
-      follower.play(fJump);
-    }
+    if (!fGround && fcu !== fJump) follower.play(fJump);
 
-    // 跟隨掉落重置
-    if (follower.y > 500) {
+    if (follower.y > 600) {
       follower.setPosition(active.x - 30, active.y - 20);
       fBody.setVelocity(0, 0);
     }
 
-    // ── Z 鍵 / 觸控 魔法彈（僅娜娜 active + 地上時）──
+    // ── Z 鍵魔法彈 ──
     if (isNana && onGround && (Phaser.Input.Keyboard.JustDown(this.keyZ) || this.touchShootTrigger)) {
       this.touchShootTrigger = false;
       this.shootMagic();
@@ -464,31 +480,120 @@ class GameScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.keyESC)) {
       this.scene.pause();
     }
+
+    // ── 掉落深淵重置 ──
+    if (active.y > 600) {
+      // 回到高處起點
+      this.nana.setPosition(100, 88);
+      this.bubu.setPosition(70, 88);
+      active = (this.activeChar === 'nana') ? this.nana : this.bubu;
+      active.body.setVelocity(0, 0);
+    }
   }
-  // ── 虛擬 D-Pad（觸控用）──
+
+  // ══════════════════════════════════
+  // 崩塌平台機制
+  // ══════════════════════════════════
+  updateCrackingPlatforms() {
+    const toRemove = [];
+
+    this.platforms.getChildren().forEach(p => {
+      if (!p.getData('cracked') || !p.active) return;
+
+      // 檢查是否有角色站在上面
+      const nanaOn = this.checkStandingOn(this.nana, p);
+      const bubuOn = this.checkStandingOn(this.bubu, p);
+      const someoneOn = nanaOn || bubuOn;
+
+      if (someoneOn && !p.getData('touched')) {
+        // 👣 剛踩上去：開始倒數
+        p.setData('touched', true);
+        p.setData('collapseTimer', 60); // ~1 秒後崩塌
+        p.setTint(0xff6666); // 變紅警告
+      }
+
+      if (p.getData('touched')) {
+        let timer = p.getData('collapseTimer');
+        timer--;
+        p.setData('collapseTimer', timer);
+
+        // 震動效果
+        if (timer > 0 && timer < 50) {
+          p.x += Phaser.Math.Between(-1, 1);
+        }
+
+        if (timer <= 0) {
+          // 💥 崩塌！
+          this.createJumpEffect(p.x, p.y);
+          p.setVisible(false);
+          p.body.enable = false;
+          p.setActive(false);
+          toRemove.push(p);
+        }
+      }
+    });
+
+    // 把崩塌的平台移到 crackedPlatforms 群組復活用（3 秒後重生）
+    toRemove.forEach(p => {
+      setTimeout(() => {
+        this.respawnCrackedPlatform(p);
+      }, 3000);
+    });
+  }
+
+  checkStandingOn(char, platform) {
+    if (!char.body) return false;
+    const body = char.body;
+    // 站在平台上：腳底高度在平台範圍內
+    const pTop = platform.y - 8;
+    const pBottom = platform.y + 8;
+    const pLeft = platform.x - 32;
+    const pRight = platform.x + 32;
+
+    return body.bottom >= pTop - 2
+      && body.bottom <= pTop + 4
+      && char.x >= pLeft
+      && char.x <= pRight
+      && (body.blocked.down || body.touching.down);
+  }
+
+  respawnCrackedPlatform(p) {
+    p.setVisible(true);
+    p.body.enable = true;
+    p.setActive(true);
+    p.clearTint();
+    p.setData('touched', false);
+    p.setData('collapseTimer', 0);
+    p.refreshBody();
+    this.createJumpEffect(p.x, p.y);
+  }
+
+  // ══════════════════════════════════
+  // 觸控虛擬 D-Pad
+  // ══════════════════════════════════
   createVirtualDPad() {
     if (this._padObjects && this._padObjects.length > 0) return;
     this._padObjects = [];
     const btnAlpha = 0.35;
-    const btnColor = 0xd5a6e8;
+    const btnColor = 0x4488cc;
     const btnSize = 48;
     const add = (o) => { this._padObjects.push(o); return o; };
 
     add(this.add.circle(60, 420, btnSize, btnColor, btnAlpha).setScrollFactor(0).setDepth(100));
     add(this.add.circle(160, 420, btnSize, btnColor, btnAlpha).setScrollFactor(0).setDepth(100));
+    add(this.add.circle(400, 420, btnSize, btnColor, btnAlpha).setScrollFactor(0).setDepth(100));  // ⬇ 掉落
     add(this.add.circle(740, 380, btnSize, btnColor, btnAlpha).setScrollFactor(0).setDepth(100));
     add(this.add.circle(770, 300, btnSize/1.3, btnColor, btnAlpha).setScrollFactor(0).setDepth(100));
-    // 🔄 角色切換觸控按鈕（右上角）
-    add(this.add.circle(770, 210, btnSize/1.3, 0x9b59b6, btnAlpha*1.5).setScrollFactor(0).setDepth(100));
+    add(this.add.circle(770, 210, btnSize/1.3, 0x4488cc, btnAlpha*1.5).setScrollFactor(0).setDepth(100));
 
     const style = { fontSize: '20px', fill: '#ffffff', fontFamily: 'monospace' };
     add(this.add.text(60, 420, '◀', style).setOrigin(0.5).setScrollFactor(0).setDepth(101));
     add(this.add.text(160, 420, '▶', style).setOrigin(0.5).setScrollFactor(0).setDepth(101));
+    add(this.add.text(400, 420, '▼', style).setOrigin(0.5).setScrollFactor(0).setDepth(101));
     add(this.add.text(740, 380, '▲', style).setOrigin(0.5).setScrollFactor(0).setDepth(101));
     add(this.add.text(770, 300, '⚡', { fontSize: '16px', fill: '#ffd700', fontFamily: 'monospace' }).setOrigin(0.5).setScrollFactor(0).setDepth(101));
     add(this.add.text(770, 210, '⇄', { fontSize: '18px', fill: '#ffffff', fontFamily: 'monospace' }).setOrigin(0.5).setScrollFactor(0).setDepth(101));
 
-    // 觸控事件（只綁一次）
     if (!this._touchEventsBound) {
       this._touchEventsBound = true;
       this.input.on('pointerdown', (pointer) => {
@@ -496,6 +601,7 @@ class GameScene extends Phaser.Scene {
         const x = pointer.x, y = pointer.y;
         if (Phaser.Math.Distance.Between(x, y, 60, 420) < btnSize) this.touchLeft = true;
         if (Phaser.Math.Distance.Between(x, y, 160, 420) < btnSize) this.touchRight = true;
+        if (Phaser.Math.Distance.Between(x, y, 400, 420) < btnSize) { this.touchDownTrigger = true; }
         if (Phaser.Math.Distance.Between(x, y, 740, 380) < btnSize) { this.touchJump = true; this.touchJumpTrigger = true; }
         if (Phaser.Math.Distance.Between(x, y, 770, 300) < btnSize/1.3) { this.touchShootTrigger = true; }
         if (Phaser.Math.Distance.Between(x, y, 770, 210) < btnSize/1.3) { this.touchSwitchTrigger = true; }
@@ -518,11 +624,14 @@ class GameScene extends Phaser.Scene {
     this.touchJump = false;
   }
 
+  // ══════════════════════════════════
+  // 特效
+  // ══════════════════════════════════
   createJumpEffect(x, y) {
     for (let i = 0; i < 6; i++) {
-      const p = this.add.image(x, y, 'particle');
-      p.setTint(0xd5a6e8);
-      p.setScale(Phaser.Math.FloatBetween(0.5, 1));
+      const p = this.add.image(x, y, 'ice_particle');
+      p.setTint(0x88ddff);
+      p.setScale(Phaser.Math.FloatBetween(0.25, 0.5));
       this.tweens.add({
         targets: p,
         x: x + Phaser.Math.Between(-20, 20),
@@ -534,21 +643,18 @@ class GameScene extends Phaser.Scene {
     }
   }
 
-  // ✨ 角色切換特效
   createSwitchEffect(char) {
-    // 閃光
-    const flash = this.add.rectangle(char.x, char.y, 60, 80, 0xd5a6e8, 0.5).setDepth(90);
+    const flash = this.add.rectangle(char.x, char.y, 60, 80, 0x4488cc, 0.5).setDepth(90);
     this.tweens.add({
       targets: flash,
       scaleX: 3, scaleY: 3, alpha: 0,
       duration: 300,
       onComplete: () => flash.destroy()
     });
-    // 粒子爆發
     for (let i = 0; i < 12; i++) {
-      const p = this.add.image(char.x, char.y, 'particle');
-      p.setTint(Phaser.Math.Between(0, 1) ? 0xd5a6e8 : 0x9b59b6);
-      p.setScale(Phaser.Math.FloatBetween(0.3, 0.8));
+      const p = this.add.image(char.x, char.y, 'ice_particle');
+      p.setTint(Phaser.Math.Between(0, 1) ? 0x44ddff : 0x88ddff);
+      p.setScale(Phaser.Math.FloatBetween(0.15, 0.4));
       this.tweens.add({
         targets: p,
         x: p.x + Phaser.Math.Between(-40, 40),
@@ -560,12 +666,11 @@ class GameScene extends Phaser.Scene {
     }
   }
 
-  // 🌫 落地塵埃
   createLandingDust(x, y) {
     for (let i = 0; i < 4; i++) {
-      const p = this.add.image(x, y, 'particle');
-      p.setTint(0x8888aa);
-      p.setScale(Phaser.Math.FloatBetween(0.3, 0.6));
+      const p = this.add.image(x, y, 'ice_particle');
+      p.setTint(0x6688aa);
+      p.setScale(Phaser.Math.FloatBetween(0.15, 0.3));
       p.setAlpha(0.5);
       this.tweens.add({
         targets: p,
@@ -578,13 +683,12 @@ class GameScene extends Phaser.Scene {
     }
   }
 
-  // 🧱 爬牆摩擦粒子
   createWallDust(x, y, dir) {
     const offsetX = dir === 'left' ? -8 : 8;
     for (let i = 0; i < 2; i++) {
-      const p = this.add.image(x + offsetX, y, 'particle');
-      p.setTint(0x6655aa);
-      p.setScale(Phaser.Math.FloatBetween(0.2, 0.4));
+      const p = this.add.image(x + offsetX, y, 'ice_particle');
+      p.setTint(0x4488cc);
+      p.setScale(Phaser.Math.FloatBetween(0.1, 0.2));
       p.setAlpha(0.4);
       this.tweens.add({
         targets: p,
@@ -603,7 +707,7 @@ class GameScene extends Phaser.Scene {
     const by = this.nana.y;
     const ball = this.add.image(bx, by, 'crystal_ball');
     ball.setScale(0.8);
-    ball.setTint(0x9b59b6);
+    ball.setTint(0x4488cc);
     this.tweens.add({
       targets: ball,
       x: bx + dir * 200,
@@ -612,15 +716,15 @@ class GameScene extends Phaser.Scene {
     });
   }
 
-  collectStar(nana, star) {
-    star.destroy();
+  collectShard(char, shard) {
+    shard.destroy();
     this.score++;
-    this.scoreText.setText(`星靈碎片: ${this.score} / 3`);
+    this.scoreText.setText(`💠 水晶碎片: ${this.score} / 3`);
 
-    this.createJumpEffect(star.x, star.y);
+    this.createJumpEffect(shard.x, shard.y);
     for (let i = 0; i < 8; i++) {
-      const p = this.add.image(star.x, star.y, 'star');
-      p.setTint(0xffd700);
+      const p = this.add.image(shard.x, shard.y, 'crystal_shard');
+      p.setTint(0x44ddff);
       p.setScale(0.5);
       this.tweens.add({
         targets: p,
@@ -640,11 +744,11 @@ class GameScene extends Phaser.Scene {
 
   showVictory() {
     this.add.rectangle(416, 240, 832, 480, 0x000000, 0.7);
-    const text = this.add.text(416, 200, '✨ 星雲森林通關！ ✨', {
-      fontSize: '28px', fill: '#d5a6e8', fontFamily: 'monospace'
+    const text = this.add.text(416, 200, '💎 水晶洞窟通關！ 💎', {
+      fontSize: '28px', fill: '#44ddff', fontFamily: 'monospace'
     }).setOrigin(0.5);
-    this.add.text(416, 250, '星靈碎片已收集，前往下一個世界...', {
-      fontSize: '14px', fill: '#9b59b6', fontFamily: 'monospace'
+    this.add.text(416, 250, '水晶之力已收集，前往下一層...', {
+      fontSize: '14px', fill: '#4488cc', fontFamily: 'monospace'
     }).setOrigin(0.5);
     this.tweens.add({
       targets: text, scaleX: 1.1, scaleY: 1.1,

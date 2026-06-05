@@ -8,6 +8,23 @@ class BootScene extends Phaser.Scene {
     // ══ 全新 SpriteSheet（指揮官提供）══
     this.load.spritesheet('nana_sprites', 'img/nana_spritesheet.png', { frameWidth: 160, frameHeight: 178 });
     this.load.spritesheet('bubu_sprites', 'img/bubu_spritesheet.png', { frameWidth: 160, frameHeight: 164 });
+    // ══ 第二關：水晶洞窟素材 ══
+    this.load.image('crystal_platform', 'img/crystal_platform.png');
+    this.load.image('cracked_platform', 'img/cracked_platform.png');
+    this.load.image('crystal_shard', 'img/crystal_shard.png');
+    this.load.image('ice_particle', 'img/ice_particle.png');
+    // ══ 第三關：幽靈森林素材 ══
+    this.load.image('haunted_forest_bg', 'img/haunted_forest_bg.png');
+    // ══ 第二關：水晶洞窟背景 ══
+    this.load.image('cavern_bg', 'img/cavern_bg.png');
+    // ══ 第一關：夜空背景 ══
+    this.load.image('night_sky_bg', 'img/night_sky_bg.png');
+    // ══ 各關卡專屬素材 ══
+    this.load.image('forest_platform', 'img/forest_platform.png');
+    this.load.image('will_o_wisp', 'img/will_o_wisp.png');
+    this.load.image('cave_cracked_platform', 'img/cave_cracked_platform.png');
+    this.load.image('star_platform', 'img/star_platform.png');
+    this.load.image('cloud_deco', 'img/cloud_deco.png');
   }
 
   create() {
