@@ -15,29 +15,34 @@ class HauntedForestScene extends Phaser.Scene {
       .setScrollFactor(0.3)
       .setDepth(0);
 
-    // ── 平台 ──（用幾何矩形取代貼圖，更乾淨）
+    // ── 平台 ──（TileSprite 讓貼圖自然拼接）
     this.platforms = this.physics.add.staticGroup();
 
-    // 地面 + 前兩段閘門地板
-    this.platforms.create(200, 476, 'forest_platform').setDisplaySize(1360, 16).refreshBody();
-    // 右側終點平台
-    this.platforms.create(1360, 430, 'forest_platform').setDisplaySize(80, 80).refreshBody();
+    // 地面（tileSprite 保持貼圖比例）
+    const groundTile = this.add.tileSprite(720, 478, 1360, 128, 'forest_platform');
+    this.physics.add.existing(groundTile, true);
+    this.platforms.add(groundTile);
 
-    // 高低平台（使用幾何矩形，視覺統一）
+    // 終點右側平台
+    const endPlatform = this.platforms.create(1360, 430, 'forest_platform');
+    endPlatform.setDisplaySize(80, 80);
+    endPlatform.refreshBody();
+
+    // 高低平台
     const levelData = [
       // ── 第一區：起點區域（x:0~400）──
-      { x: 100, y: 370, w: 80, h: 16 },   // 起點邊
-      { x: 280, y: 320, w: 80, h: 16 },   // 中間
-      { x: 160, y: 260, w: 80, h: 16 },   // 高處
+      { x: 100, y: 370, w: 80, h: 40 },   // 起點邊
+      { x: 280, y: 320, w: 80, h: 40 },   // 中間
+      { x: 160, y: 260, w: 80, h: 40 },   // 高處
 
       // ── 第二區：第一道閘門後（x:600~800）──
-      { x: 650, y: 360, w: 100, h: 16 },  // 入口左
-      { x: 780, y: 310, w: 80, h: 16 },   // 中間
-      { x: 680, y: 240, w: 80, h: 16 },   // 高處
+      { x: 650, y: 360, w: 100, h: 40 }, // 入口左
+      { x: 780, y: 310, w: 80, h: 40 },  // 中間
+      { x: 680, y: 240, w: 80, h: 40 },  // 高處
 
       // ── 第三區：第二道閘門後（x:1100~1300）──
-      { x: 1150, y: 370, w: 80, h: 16 },  // 入口
-      { x: 1280, y: 320, w: 80, h: 16 },  // 終點前
+      { x: 1150, y: 370, w: 80, h: 40 }, // 入口
+      { x: 1280, y: 320, w: 80, h: 40 }, // 終點前
     ];
 
     levelData.forEach(d => {
