@@ -81,7 +81,7 @@ class CrystalCavernScene extends Phaser.Scene {
     levelData.forEach(d => {
       const textureKey = d.cracked ? 'cracked_platform' : 'crystal_platform';
       const p = this.platforms.create(d.x, d.y, textureKey);
-      p.setDisplaySize(64, 16);  // 原圖 128×32，顯示為 64×16
+      p.refreshBody();
       p.refreshBody();
       // 崩塌平台標記
       if (d.cracked) {
@@ -100,7 +100,6 @@ class CrystalCavernScene extends Phaser.Scene {
     ];
     shardPositions.forEach(pos => {
       const s = this.stars.create(pos.x, pos.y, 'crystal_shard');
-      s.setScale(0.75);  // 原圖 16×16，顯示 12×12（跟第一關的星星差不多大）
       s.setTint(0x44ddff);
       this.tweens.add({
         targets: s,

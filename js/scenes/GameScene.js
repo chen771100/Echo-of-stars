@@ -48,10 +48,10 @@ class GameScene extends Phaser.Scene {
     // ── 平台群組 ──
     this.platforms = this.physics.add.staticGroup();
 
-    // 地面平台
-    const ground = this.platforms.create(416, 464, 'platform');
-    ground.setScale(832 / 64, 1).refreshBody();
-    ground.setDisplaySize(832, 16);
+    // 地面平台（64×16 tiles 並排，不拉伸）
+    for (let i = 0; i < 13; i++) {
+      this.platforms.create(32 + i * 64, 464, 'platform');
+    }
 
     // 星雲森林關卡平台（重新設計：確保走路不撞頭、跳躍可到達）
     // 地面表面 y=456，平台 64×16，角色最小行走間距需 90px
