@@ -124,6 +124,28 @@ class HauntedForestScene extends Phaser.Scene {
     this.switchCooldown = 0;
     this.hasDoubleJumped = false;
 
+    // ── 觸控虛擬按鍵 ──
+    this.touchLeft = false;
+    this.touchRight = false;
+    this.touchJump = false;
+    this.touchJumpTrigger = false;
+    this.touchSwitchTrigger = false;
+    this.touchPadVisible = false;
+    this._padObjects = null;
+    const isTouch = this.sys.game.device.input.touch;
+    // 切換按鈕
+    this.togglePadBtn = this.add.circle(806, 16, 12, 0x66ff88, 0.5).setScrollFactor(0).setDepth(200).setInteractive();
+    this.add.text(806, 16, '⚙', { fontSize: '14px', fill: '#fff', fontFamily: 'monospace' }).setOrigin(0.5).setScrollFactor(0).setDepth(201);
+    this.togglePadBtn.on('pointerdown', () => {
+      this.touchPadVisible = !this.touchPadVisible;
+      if (this.touchPadVisible) this.createVirtualDPad();
+      else this.destroyVirtualDPad();
+    });
+    if (isTouch) {
+      this.touchPadVisible = true;
+      this.createVirtualDPad();
+    }
+
     // ── 碰撞 ──
     this.physics.add.collider(this.nana, this.platforms);
     this.physics.add.collider(this.bubu, this.platforms);
@@ -250,6 +272,43 @@ class HauntedForestScene extends Phaser.Scene {
     }
   }
 
+  // ── 虛擬觸控按鍵 ──
+  createVirtualDPad() {
+    if (this._padObjects && this._padObjects.length > 0) return;
+    this._padObjects = [];
+    const add = (o) => { o.setScrollFactor(0).setDepth(100); this._padObjects.push(o); return o; };
+    const a = 0.35, c = 0x66ff88, s = 48;
+
+    add(this.add.circle(60, 420, s, c, a));
+    add(this.add.circle(160, 420, s, c, a));
+    add(this.add.circle(740, 380, s, c, a));
+    add(this.add.circle(770, 290, s/1.3, c, a));
+
+    const st = { fontSize:'20px', fill:'#fff', fontFamily:'monospace' };
+    add(this.add.text(60,420,'◀',st).setDepth(101));
+    add(this.add.text(160,420,'▶',st).setDepth(101));
+    add(this.add.text(740,380,'▲',st).setDepth(101));
+    add(this.add.text(770,290,'⇄',{...st,fontSize:'18px'}).setDepth(101));
+
+    if (!this._touchEventsBound) {
+      this._touchEventsBound = true;
+      this.input.on('pointerdown', (p) => {
+        if (!this.touchPadVisible) return;
+        const x=p.x, y=p.y;
+        if (Phaser.Math.Distance.Between(x,y,60,420)<s) this.touchLeft=true;
+        if (Phaser.Math.Distance.Between(x,y,160,420)<s) this.touchRight=true;
+        if (Phaser.Math.Distance.Between(x,y,740,380)<s){this.touchJump=true;this.touchJumpTrigger=true;}
+        if (Phaser.Math.Distance.Between(x,y,770,290)<s/1.3) this.touchSwitchTrigger=true;
+      });
+      this.input.on('pointerup',()=>{this.touchLeft=false;this.touchRight=false;this.touchJump=false;});
+    }
+  }
+
+  destroyVirtualDPad() {
+    if (this._padObjects) { this._padObjects.forEach(o=>o.destroy()); this._padObjects=null; }
+    this.touchLeft=false; this.touchRight=false; this.touchJump=false;
+  }
+
   // ── 更新 ──
   update() {
     const active = this.activeChar === 'nana' ? this.nana : this.bubu;
@@ -259,8 +318,8 @@ class HauntedForestScene extends Phaser.Scene {
 
     if (this.switchCooldown > 0) this.switchCooldown--;
 
-    const left = this.cursors.left.isDown || this.keyA.isDown;
-    const right = this.cursors.right.isDown || this.keyD.isDown;
+    const left = this.cursors.left.isDown || this.keyA.isDown || this.touchLeft;
+    const right = this.cursors.right.isDown || this.keyD.isDown || this.touchRight;
     const speed = 200;
 
     if (left) { body.setVelocityX(-speed); active.setFlipX(true); }
@@ -273,7 +332,8 @@ class HauntedForestScene extends Phaser.Scene {
     else { if (cur !== 'nana_idle') active.play('nana_idle'); }
 
     const jumpPressed = Phaser.Input.Keyboard.JustDown(this.cursors.up)
-      || Phaser.Input.Keyboard.JustDown(this.keyW);
+      || Phaser.Input.Keyboard.JustDown(this.keyW) || this.touchJumpTrigger;
+    if (this.touchJumpTrigger) this.touchJumpTrigger = false;
     if (jumpPressed && onGround) body.setVelocityY(-400);
     else if (jumpPressed && !onGround && isNana && !this.hasDoubleJumped) {
       body.setVelocityY(-350);
@@ -284,6 +344,10 @@ class HauntedForestScene extends Phaser.Scene {
       this.switchChar(this.activeChar === 'nana' ? 'bubu' : 'nana');
     if (Phaser.Input.Keyboard.JustDown(this.keyOne)) this.switchChar('nana');
     if (Phaser.Input.Keyboard.JustDown(this.keyTwo)) this.switchChar('bubu');
+    if (this.touchSwitchTrigger) {
+      this.touchSwitchTrigger = false;
+      this.switchChar(this.activeChar === 'nana' ? 'bubu' : 'nana');
+    }
 
     // 跟隨者
     const follower = this.activeChar === 'nana' ? this.bubu : this.nana;
