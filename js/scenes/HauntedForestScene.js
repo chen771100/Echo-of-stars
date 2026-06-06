@@ -56,7 +56,8 @@ class HauntedForestScene extends Phaser.Scene {
     this.bubu.setScale(this.CHAR_SCALE);
 
     this.activeChar = 'nana';
-    this.crystalBall = this.add.image(120, 105, 'crystal_ball');
+    this.crystalBall = this.add.image(120, 105, 'crystal_ball_sd');
+    this.crystalBall.setScale(0.025);
 
     // ── 迷霧（RenderTexture fill + erase）──
     const fogGfx = this.make.graphics({ add: false });
