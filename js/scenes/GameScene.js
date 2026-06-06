@@ -101,8 +101,8 @@ class GameScene extends Phaser.Scene {
       s.setTint(0xffd700);
       this.tweens.add({
         targets: s,
-        scaleX: 2,
-        scaleY: 2,
+        scaleX: 0.0375,  // 2 倍 = 0.01875*2
+        scaleY: 0.0375,
         duration: 800,
         yoyo: true,
         repeat: -1
