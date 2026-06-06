@@ -23,7 +23,7 @@ class GameScene extends Phaser.Scene {
         'star_sd'
       );
       star.setAlpha(Phaser.Math.FloatBetween(0.2, 0.8));
-      star.setScale(Phaser.Math.FloatBetween(0.008, 0.025));
+      star.setScale(Phaser.Math.FloatBetween(0.004, 0.0125));
     }
 
     // ── 魔法粒子背景動畫 ──
@@ -97,7 +97,7 @@ class GameScene extends Phaser.Scene {
     ];
     starPositions.forEach(pos => {
       const s = this.stars.create(pos.x, pos.y, 'star_sd');
-      s.setScale(0.0375);  // 8*1.5 / 320
+      s.setScale(0.01875);  // 8*1.5 / 640
       s.setTint(0xffd700);
       this.tweens.add({
         targets: s,
@@ -122,7 +122,7 @@ class GameScene extends Phaser.Scene {
 
     // 水晶球特效（跟隨娜娜，由 update 控制位置）
     this.crystalBall = this.add.image(120, 390, 'crystal_ball_sd');
-    this.crystalBall.setScale(0.05);  // 16 / 320
+    this.crystalBall.setScale(0.025);  // 16 / 640
 
     // ── 布布（動畫 sprite）──
     this.bubu = this.physics.add.sprite(70, 412, 'bubu_sprites', 0);
@@ -651,7 +651,7 @@ class GameScene extends Phaser.Scene {
     const bx = this.nana.x + dir * 20;
     const by = this.nana.y;
     const ball = this.add.image(bx, by, 'crystal_ball_sd');
-    ball.setScale(0.04);  // 16*0.8 / 320
+    ball.setScale(0.02);  // 16*0.8 / 640
     ball.setTint(0x9b59b6);
     this.tweens.add({
       targets: ball,
@@ -670,7 +670,7 @@ class GameScene extends Phaser.Scene {
     for (let i = 0; i < 8; i++) {
       const p = this.add.image(star.x, star.y, 'star_sd');
       p.setTint(0xffd700);
-      p.setScale(0.0125);  // 4 / 320
+      p.setScale(0.00625);  // 4 / 640
       this.tweens.add({
         targets: p,
         x: p.x + Phaser.Math.Between(-30, 30),
