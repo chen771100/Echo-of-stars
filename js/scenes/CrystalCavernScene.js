@@ -129,7 +129,7 @@ class CrystalCavernScene extends Phaser.Scene {
     // 水晶球跟隨娜娜
     // 水晶球跟隨娜娜
     this.crystalBall = this.add.image(120, 75, 'crystal_ball_sd');
-    this.crystalBall.setScale(0.0625);
+    this.crystalBall.setScale(0.05);
 
     // ── 碰撞設定（含穿過平台往下掉）──
     this._nanaDrop = 0;
@@ -714,7 +714,7 @@ class CrystalCavernScene extends Phaser.Scene {
     const bx = this.nana.x + dir * 20;
     const by = this.nana.y;
     const ball = this.add.image(bx, by, 'crystal_ball_sd');
-    ball.setScale(0.05);
+    ball.setScale(0.04);
     ball.setTint(0x4488cc);
     this.tweens.add({
       targets: ball,

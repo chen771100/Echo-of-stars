@@ -97,7 +97,7 @@ class HauntedForestScene extends Phaser.Scene {
     ];
     wispPos.forEach(p => {
       const w = this.stars.create(p.x, p.y, 'will_o_wisp_sd');
-      w.setScale(0.25);
+      w.setScale(0.2);
       w.setTint(p.tint);
       this.tweens.add({ targets: w, alpha: 0.4, duration: 1000, yoyo: true, repeat: -1 });
     });
