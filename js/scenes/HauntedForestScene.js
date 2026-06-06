@@ -20,11 +20,11 @@ class HauntedForestScene extends Phaser.Scene {
     // 地面：tiles 160x80 並排，14 片 = 1120px 寬
     const TILE = 160, TH = 80;
     for (let i = 0; i < 9; i++) {
-      this.platforms.create(TILE/2 + i * TILE, 480 - TH/2, 'forest_platform');
+      const pf = this.platforms.create(TILE/2 + i * TILE, 480 - TH/2, 'forest_platform_sd');
+      pf.setScale(0.25); pf.refreshBody();
     }
 
-    // 右側終點平台（80x80 縮放成正方形？算了，直接用 160x80 tile）
-    this.platforms.create(1360, 430, 'forest_platform');
+    this.platforms.create(1360, 430, 'forest_platform_sd').setScale(0.25).refreshBody();
 
     // 各關卡段的高台平台（160x80 原生）
     const levelData = [
@@ -42,7 +42,8 @@ class HauntedForestScene extends Phaser.Scene {
     ];
 
     levelData.forEach(d => {
-      this.platforms.create(d.x, d.y, 'forest_platform');
+      const pf = this.platforms.create(d.x, d.y, 'forest_platform_sd');
+      pf.setScale(0.25); pf.refreshBody();
     });
 
     // ── 角色 ──
@@ -95,7 +96,8 @@ class HauntedForestScene extends Phaser.Scene {
       { x: 1320, y: 240, tint: 0xccff66 },
     ];
     wispPos.forEach(p => {
-      const w = this.stars.create(p.x, p.y, 'will_o_wisp');
+      const w = this.stars.create(p.x, p.y, 'will_o_wisp_sd');
+      w.setScale(0.25);
       w.setTint(p.tint);
       this.tweens.add({ targets: w, alpha: 0.4, duration: 1000, yoyo: true, repeat: -1 });
     });
@@ -123,9 +125,13 @@ class HauntedForestScene extends Phaser.Scene {
     this.keyQ = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
     this.keyOne = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ONE);
     this.keyTwo = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TWO);
+    this.keyESC = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+    this.keyR = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
 
     this.switchCooldown = 0;
     this.hasDoubleJumped = false;
+    this.isPaused = false;
+    this.followerJumpCooldown = 0;
 
     // ── 觸控虛擬按鍵 ──
     this.touchLeft = false;
@@ -152,6 +158,7 @@ class HauntedForestScene extends Phaser.Scene {
     // ── 碰撞 ──
     this.physics.add.collider(this.nana, this.platforms);
     this.physics.add.collider(this.bubu, this.platforms);
+    this.physics.add.collider(this.nana, this.bubu);
     this.physics.add.overlap(this.nana, this.stars, this.collectWisp, null, this);
     this.physics.add.overlap(this.bubu, this.stars, this.collectWisp, null, this);
 
@@ -170,22 +177,29 @@ class HauntedForestScene extends Phaser.Scene {
   }
 
   setupCharacters(char) {
-    char.body.setSize(160, char === this.nana ? 178 : 164);
-    char.body.setOffset(0, 0);
+    if (char === this.nana) {
+      char.body.setSize(90, 165);
+      char.body.setOffset(35, 13);
+    } else {
+      char.body.setSize(90, 155);
+      char.body.setOffset(35, 9);
+    }
     char.setCollideWorldBounds(true);
     char.setDepth(10);
   }
 
   // ── 燈塔系統 ──
   addBeaconPlatform(x, y) {
-    this.platforms.create(x, y, 'forest_platform');
+    const pf = this.platforms.create(x, y, 'forest_platform_sd');
+    pf.setScale(0.25); pf.refreshBody();
   }
 
   setupBeaconGroup(gateX, beacons) {
     // 閘門（上段 + 下段，擋住整個高度）
-    const gate1 = this.platforms.create(gateX, 240, 'forest_platform');
-    gate1.setDepth(8);
-    const gate2 = this.platforms.create(gateX, 380, 'forest_platform');
+    const gate1 = this.platforms.create(gateX, 240, 'forest_platform_sd');
+    gate1.setScale(0.25); gate1.refreshBody(); gate1.setDepth(8);
+    const gate2 = this.platforms.create(gateX, 380, 'forest_platform_sd');
+    gate2.setScale(0.25); gate2.refreshBody();
     gate2.setDepth(8);
     const gate = gate1; // 用 gate1 來控制開關
 
@@ -345,6 +359,19 @@ class HauntedForestScene extends Phaser.Scene {
 
   // ── 更新 ──
   update() {
+    // ESC 暫停
+    if (Phaser.Input.Keyboard.JustDown(this.keyESC)) {
+      this.togglePause();
+      return;
+    }
+    if (this.isPaused) return;
+
+    // R 重新開始
+    if (Phaser.Input.Keyboard.JustDown(this.keyR)) {
+      this.scene.restart();
+      return;
+    }
+
     const active = this.activeChar === 'nana' ? this.nana : this.bubu;
     const isNana = this.activeChar === 'nana';
     const body = active.body;
@@ -352,6 +379,7 @@ class HauntedForestScene extends Phaser.Scene {
     if (onGround) this.hasDoubleJumped = false;
 
     if (this.switchCooldown > 0) this.switchCooldown--;
+    if (this.followerJumpCooldown > 0) this.followerJumpCooldown--;
 
     const left = this.cursors.left.isDown || this.keyA.isDown || this.touchLeft;
     const right = this.cursors.right.isDown || this.keyD.isDown || this.touchRight;
@@ -371,9 +399,11 @@ class HauntedForestScene extends Phaser.Scene {
       || Phaser.Input.Keyboard.JustDown(this.keyW) || this.touchJumpTrigger;
     if (this.touchJumpTrigger) this.touchJumpTrigger = false;
     if (jumpPressed && onGround) body.setVelocityY(-400);
-    else if (jumpPressed && !onGround && isNana && !this.hasDoubleJumped) {
+    else if (jumpPressed && !onGround && !this.hasDoubleJumped) {
+      // 二段跳（娜娜 & 布布都有）
       body.setVelocityY(-350);
       this.hasDoubleJumped = true;
+      active.play(isNana ? 'nana_doublejump' : 'bubu_doublejump');
     }
 
     if (Phaser.Input.Keyboard.JustDown(this.keyQ))
@@ -385,7 +415,7 @@ class HauntedForestScene extends Phaser.Scene {
       this.switchChar(this.activeChar === 'nana' ? 'bubu' : 'nana');
     }
 
-    // 跟隨者
+    // 跟隨者（增強版：含冷卻的跳躍）
     const follower = this.activeChar === 'nana' ? this.bubu : this.nana;
     const fBody = follower.body;
     const fGround = fBody.blocked.down || fBody.touching.down;
@@ -395,7 +425,10 @@ class HauntedForestScene extends Phaser.Scene {
       fBody.setVelocityX(dx > 0 ? 180 : -180);
       follower.setFlipX(dx < 0);
     } else if (fGround) fBody.setVelocityX(0);
-    if (dy < -80 && fGround) fBody.setVelocityY(-400);
+    if (dy < -80 && fGround && this.followerJumpCooldown === 0) {
+      fBody.setVelocityY(-400);
+      this.followerJumpCooldown = 30;
+    }
     if (follower.y > 500) { follower.setPosition(active.x - 30, active.y - 20); fBody.setVelocity(0, 0); }
 
     // 掉落重置
@@ -408,5 +441,38 @@ class HauntedForestScene extends Phaser.Scene {
     this.crystalBall.setPosition(active.x + 20, active.y - 40);
     this.updateFog();
     this.updateBeacons();
+  }
+
+  // ══════════════════════════════════
+  // 暫停 / 重新開始
+  // ══════════════════════════════════
+  togglePause() {
+    this.isPaused = !this.isPaused;
+    if (this.isPaused) {
+      this._pauseOverlay = this.add.rectangle(720, 240, 1440, 480, 0x000000, 0.7).setDepth(200).setScrollFactor(0);
+      this._pauseText = this.add.text(720, 160, '⏸ 暫停中', {
+        fontSize: '32px', fill: '#66ff88', fontFamily: 'monospace'
+      }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
+
+      const btnStyle = {
+        fontSize: '18px', fill: '#66ff88', fontFamily: 'monospace',
+        backgroundColor: '#1a4a2a', padding: { x: 14, y: 8 }
+      };
+
+      const resumeBtn = this.add.text(720, 240, '▶ 繼續', btnStyle)
+        .setOrigin(0.5).setDepth(201).setScrollFactor(0).setInteractive({ useHandCursor: true });
+      resumeBtn.on('pointerdown', () => this.togglePause());
+
+      const restartBtn = this.add.text(720, 290, '🔄 重新開始', btnStyle)
+        .setOrigin(0.5).setDepth(201).setScrollFactor(0).setInteractive({ useHandCursor: true });
+      restartBtn.on('pointerdown', () => { this.isPaused = false; this.scene.restart(); });
+
+      const menuBtn = this.add.text(720, 340, '📋 選關卡', btnStyle)
+        .setOrigin(0.5).setDepth(201).setScrollFactor(0).setInteractive({ useHandCursor: true });
+      menuBtn.on('pointerdown', () => { this.isPaused = false; this.scene.start('LevelSelectScene'); });
+    } else {
+      if (this._pauseOverlay) { this._pauseOverlay.destroy(); this._pauseOverlay = null; }
+      if (this._pauseText) { this._pauseText.destroy(); this._pauseText = null; }
+    }
   }
 }

@@ -12,6 +12,12 @@ class BootScene extends Phaser.Scene {
     this.load.image('night_sky_bg', 'img/night_sky_bg.png');
     this.load.image('cavern_bg', 'img/cavern_bg.png');
     this.load.image('haunted_forest_bg', 'img/haunted_forest_bg.png');
+    // ══ SD 生成的高解析素材（4x 大，遊戲中用 setScale 縮小顯示）══
+    this.load.image('crystal_ball_sd', 'img/crystal_ball_sd.png');
+    this.load.image('platform_sd', 'img/platform_sd.png');
+    this.load.image('star_sd', 'img/star_sd.png');
+    this.load.image('forest_platform_sd', 'img/forest_platform_sd.png');
+    this.load.image('will_o_wisp_sd', 'img/will_o_wisp_sd.png');
   }
 
   create() {
@@ -23,6 +29,7 @@ class BootScene extends Phaser.Scene {
       frameRate: 10, repeat: -1
     });
     this.anims.create({ key: 'nana_jump', frames: [{ key: 'nana_sprites', frame: 1 }] });
+    this.anims.create({ key: 'nana_doublejump', frames: [{ key: 'nana_sprites', frame: 1 }] });
 
     // ══ 布布動畫 ══
     this.anims.create({ key: 'bubu_idle', frames: [{ key: 'bubu_sprites', frame: 0 }] });
@@ -32,16 +39,9 @@ class BootScene extends Phaser.Scene {
       frameRate: 10, repeat: -1
     });
     this.anims.create({ key: 'bubu_jump', frames: [{ key: 'bubu_sprites', frame: 0 }] });
+    this.anims.create({ key: 'bubu_doublejump', frames: [{ key: 'bubu_sprites', frame: 6 }] });
 
-    // ══ 所有關卡貼圖（程式繪製，原生尺寸不拉伸）══
-    this.genTexture('crystal_ball', 16, 16, (g) => {
-      g.fillStyle(0x9b59b6, 0.6);
-      g.fillCircle(8, 8, 8);
-      g.fillStyle(0xd5a6e8, 0.8);
-      g.fillCircle(6, 6, 3);
-    });
-
-    // 共用粒子（小亮點）
+    // 共用粒子（小亮點，仍用程式繪製）
     this.genTexture('ice_particle', 4, 4, (g) => {
       g.fillStyle(0xd5a6e8);
       g.fillCircle(2, 2, 2);
@@ -49,23 +49,6 @@ class BootScene extends Phaser.Scene {
     this.genTexture('particle', 6, 6, (g) => {
       g.fillStyle(0xd5a6e8);
       g.fillCircle(3, 3, 3);
-    });
-
-    // ══ 第一關：星雲森林 ══
-    // 平台 64x16（紫色石頭風格）
-    this.genTexture('platform', 64, 16, (g) => {
-      g.fillStyle(0x1a0a3e);
-      g.fillRect(0, 0, 64, 16);
-      g.fillStyle(0x6b2fa0);
-      g.fillRect(0, 0, 64, 2);
-      g.lineStyle(1, 0x3d1a6e);
-      for (let x = 0; x < 64; x += 16) g.lineBetween(x, 2, x, 16);
-    });
-
-    // 星星 8x8（白色圓形）
-    this.genTexture('star', 8, 8, (g) => {
-      g.fillStyle(0xffffff, 0.9);
-      g.fillCircle(4, 4, 4);
     });
 
     // ══ 第二關：水晶洞窟 ══

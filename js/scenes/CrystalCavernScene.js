@@ -82,7 +82,6 @@ class CrystalCavernScene extends Phaser.Scene {
       const textureKey = d.cracked ? 'cracked_platform' : 'crystal_platform';
       const p = this.platforms.create(d.x, d.y, textureKey);
       p.refreshBody();
-      p.refreshBody();
       // 崩塌平台標記
       if (d.cracked) {
         p.setData('cracked', true);
@@ -117,28 +116,20 @@ class CrystalCavernScene extends Phaser.Scene {
     this.nana.setScale(this.CHAR_SCALE);
     this.nana.setCollideWorldBounds(true);
     this.nana.setFlipX(false);
-    this.nana.body.setSize(160, 178);
-    this.nana.body.setOffset(0, 0);
+    this.nana.body.setSize(90, 165);
+    this.nana.body.setOffset(35, 13);
 
     this.bubu = this.physics.add.sprite(70, 88, 'bubu_sprites', 0);
     this.bubu.setScale(this.CHAR_SCALE);
     this.bubu.setCollideWorldBounds(true);
     this.bubu.setFlipX(false);
-    this.bubu.body.setSize(160, 164);
-    this.bubu.body.setOffset(0, 0);
+    this.bubu.body.setSize(90, 155);
+    this.bubu.body.setOffset(35, 9);
 
     // 水晶球跟隨娜娜
     // 水晶球跟隨娜娜
-    this.crystalBall = this.add.image(120, 75, 'crystal_ball');
-    this.tweens.add({
-      targets: this.crystalBall,
-      y: 415,
-      x: 125,
-      duration: 1200,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut'
-    });
+    this.crystalBall = this.add.image(120, 75, 'crystal_ball_sd');
+    this.crystalBall.setScale(0.0625);
 
     // ── 碰撞設定（含穿過平台往下掉）──
     this._nanaDrop = 0;
@@ -149,6 +140,8 @@ class CrystalCavernScene extends Phaser.Scene {
     this.physics.add.collider(this.bubu, this.platforms, null, (bubu, plat) => {
       return this._bubuDrop <= 0;
     });
+    // 🎯 角色間碰撞
+    this.physics.add.collider(this.nana, this.bubu);
     this.physics.add.overlap(this.nana, this.stars, this.collectShard, null, this);
     this.physics.add.overlap(this.bubu, this.stars, this.collectShard, null, this);
 
@@ -161,6 +154,7 @@ class CrystalCavernScene extends Phaser.Scene {
     this.keyQ = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
     this.key1 = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ONE);
     this.key2 = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TWO);
+    this.keyR = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
 
     // ── 雙角色系統 ──
     this.activeChar = 'nana';
@@ -195,10 +189,14 @@ class CrystalCavernScene extends Phaser.Scene {
     this.hasDoubleJumped = false;
     this.score = 0;
     this.wasOnGround = true;
+    this._prevOnGround = true;
+    this.airFrameCount = 0;
+    this._justLeftGround = false;
     this.landingCooldowns = {};
     this.dashCooldown = 0;
     this.jumpBufferTimer = 0;
     this.followerJumpCooldown = 0;
+    this.isPaused = false;
 
     // ── UI ──
     this.scoreText = this.add.text(16, 16, '💠 水晶碎片: 0 / 3', {
@@ -225,8 +223,8 @@ class CrystalCavernScene extends Phaser.Scene {
 
     // ── 相機（往下探索，跟上角色）──
     this.cameras.main.startFollow(this.nana, true, 0.1, 0.1);
-    this.cameras.main.setBounds(0, -50, 832, 600);
-    this.physics.world.setBounds(0, -50, 832, 600);
+    this.cameras.main.setBounds(0, -50, 832, 620);
+    this.physics.world.setBounds(0, -50, 832, 620);
 
     // ── 崩塌平台狀態記錄 ──
     this._crackingPlatforms = []; // 正在崩塌中的平台
@@ -236,6 +234,19 @@ class CrystalCavernScene extends Phaser.Scene {
 
   update() {
     if (this.gameWon) return;
+
+    // ESC 暫停
+    if (Phaser.Input.Keyboard.JustDown(this.keyESC)) {
+      this.togglePause();
+      return;
+    }
+    if (this.isPaused) return;
+
+    // R 重新開始
+    if (Phaser.Input.Keyboard.JustDown(this.keyR)) {
+      this.scene.restart();
+      return;
+    }
 
     const speed = 200;
     const dashCooldownFrames = 60;
@@ -352,10 +363,11 @@ class CrystalCavernScene extends Phaser.Scene {
       if (canGroundJump) {
         activeBody.setVelocityY(-400);
         this.jumpBufferTimer = 0;
-      } else if (isNana && this.canDoubleJump && !this.hasDoubleJumped) {
+      } else if (this.canDoubleJump && !this.hasDoubleJumped) {
+        // 二段跳（娜娜 & 布布都有）
         activeBody.setVelocityY(-350);
         this.hasDoubleJumped = true;
-        active.play('nana_doublejump');
+        active.play(isNana ? 'nana_doublejump' : 'bubu_doublejump');
         this.createJumpEffect(active.x, active.y + 10);
       }
     }
@@ -464,7 +476,7 @@ class CrystalCavernScene extends Phaser.Scene {
     }
     if (!fGround && fcu !== fJump) follower.play(fJump);
 
-    if (follower.y > 600) {
+    if (follower.y > 590) {
       follower.setPosition(active.x - 30, active.y - 20);
       fBody.setVelocity(0, 0);
     }
@@ -475,18 +487,15 @@ class CrystalCavernScene extends Phaser.Scene {
       this.shootMagic();
     }
 
-    // ── ESC 暫停 ──
-    if (Phaser.Input.Keyboard.JustDown(this.keyESC)) {
-      this.scene.pause();
-    }
-
     // ── 掉落深淵重置 ──
-    if (active.y > 600) {
-      // 回到高處起點
+    if (active.y > 590) {
+      // 掉到底部 → 回到起點
       this.nana.setPosition(100, 88);
       this.bubu.setPosition(70, 88);
-      active = (this.activeChar === 'nana') ? this.nana : this.bubu;
-      active.body.setVelocity(0, 0);
+      this.nana.body.setVelocity(0, 0);
+      this.bubu.body.setVelocity(0, 0);
+      this.activeChar = 'nana';
+      this.cameras.main.startFollow(this.nana, true, 0.1, 0.1);
     }
   }
 
@@ -704,8 +713,8 @@ class CrystalCavernScene extends Phaser.Scene {
     const dir = this.nana.flipX ? -1 : 1;
     const bx = this.nana.x + dir * 20;
     const by = this.nana.y;
-    const ball = this.add.image(bx, by, 'crystal_ball');
-    ball.setScale(0.8);
+    const ball = this.add.image(bx, by, 'crystal_ball_sd');
+    ball.setScale(0.05);
     ball.setTint(0x4488cc);
     this.tweens.add({
       targets: ball,
@@ -769,5 +778,38 @@ class CrystalCavernScene extends Phaser.Scene {
     nextBtn.on('pointerdown', () => this.scene.start('HauntedForestScene'));
     nextBtn.on('pointerover', () => nextBtn.setStyle({ fill: '#ffffff' }));
     nextBtn.on('pointerout', () => nextBtn.setStyle({ fill: '#66ff88' }));
+  }
+
+  // ══════════════════════════════════
+  // 暫停 / 重新開始
+  // ══════════════════════════════════
+  togglePause() {
+    this.isPaused = !this.isPaused;
+    if (this.isPaused) {
+      this._pauseOverlay = this.add.rectangle(416, 240, 832, 480, 0x000000, 0.7).setDepth(200).setScrollFactor(0);
+      this._pauseText = this.add.text(416, 160, '⏸ 暫停中', {
+        fontSize: '32px', fill: '#44ddff', fontFamily: 'monospace'
+      }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
+
+      const btnStyle = {
+        fontSize: '18px', fill: '#44ddff', fontFamily: 'monospace',
+        backgroundColor: '#0a3a5a', padding: { x: 14, y: 8 }
+      };
+
+      const resumeBtn = this.add.text(416, 240, '▶ 繼續', btnStyle)
+        .setOrigin(0.5).setDepth(201).setScrollFactor(0).setInteractive({ useHandCursor: true });
+      resumeBtn.on('pointerdown', () => this.togglePause());
+
+      const restartBtn = this.add.text(416, 290, '🔄 重新開始', btnStyle)
+        .setOrigin(0.5).setDepth(201).setScrollFactor(0).setInteractive({ useHandCursor: true });
+      restartBtn.on('pointerdown', () => { this.isPaused = false; this.scene.restart(); });
+
+      const menuBtn = this.add.text(416, 340, '📋 選關卡', btnStyle)
+        .setOrigin(0.5).setDepth(201).setScrollFactor(0).setInteractive({ useHandCursor: true });
+      menuBtn.on('pointerdown', () => { this.isPaused = false; this.scene.start('LevelSelectScene'); });
+    } else {
+      if (this._pauseOverlay) { this._pauseOverlay.destroy(); this._pauseOverlay = null; }
+      if (this._pauseText) { this._pauseText.destroy(); this._pauseText = null; }
+    }
   }
 }

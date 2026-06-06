@@ -20,10 +20,10 @@ class GameScene extends Phaser.Scene {
       const star = this.add.image(
         Phaser.Math.Between(0, 832),
         Phaser.Math.Between(-300, 480),
-        'star'
+        'star_sd'
       );
       star.setAlpha(Phaser.Math.FloatBetween(0.2, 0.8));
-      star.setScale(Phaser.Math.FloatBetween(0.3, 1));
+      star.setScale(Phaser.Math.FloatBetween(0.02, 0.06));
     }
 
     // ── 魔法粒子背景動畫 ──
@@ -50,7 +50,9 @@ class GameScene extends Phaser.Scene {
 
     // 地面平台（64×16 tiles 並排，不拉伸）
     for (let i = 0; i < 13; i++) {
-      this.platforms.create(32 + i * 64, 464, 'platform');
+      const pp = this.platforms.create(32 + i * 64, 464, 'platform_sd');
+      pp.setScale(0.25);
+      pp.refreshBody();
     }
 
     // 星雲森林關卡平台（重新設計：確保走路不撞頭、跳躍可到達）
@@ -81,7 +83,8 @@ class GameScene extends Phaser.Scene {
     ];
 
     levelData.forEach(d => {
-      const p = this.platforms.create(d.x, d.y, 'platform');
+      const p = this.platforms.create(d.x, d.y, 'platform_sd');
+      p.setScale(0.25);
       p.refreshBody();
     });
 
@@ -93,8 +96,8 @@ class GameScene extends Phaser.Scene {
       { x: 700, y: 136 },  // 從第三層 (700,156) 跳一下可拿到
     ];
     starPositions.forEach(pos => {
-      const s = this.stars.create(pos.x, pos.y, 'star');
-      s.setScale(1.5);
+      const s = this.stars.create(pos.x, pos.y, 'star_sd');
+      s.setScale(0.094);  // 8*1.5 / 128
       s.setTint(0xffd700);
       this.tweens.add({
         targets: s,
@@ -113,32 +116,28 @@ class GameScene extends Phaser.Scene {
     this.nana.setCollideWorldBounds(true);
     this.nana.setFlipX(false);  // 新 spritesheet 預設朝右，無需翻轉
     // body 等於 sprite 顯示尺寸，確保腳底對齊地面
-    this.nana.body.setSize(160, 178);
-    this.nana.body.setOffset(0, 0);
+    // 人物實際約 103x165，縮小碰撞箱到主要身體
+    this.nana.body.setSize(90, 165);
+    this.nana.body.setOffset(35, 13);
 
-    // 水晶球特效
-    this.crystalBall = this.add.image(120, 390, 'crystal_ball');
-    this.tweens.add({
-      targets: this.crystalBall,
-      y: 385,
-      x: 125,
-      duration: 1200,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut'
-    });
+    // 水晶球特效（跟隨娜娜，由 update 控制位置）
+    this.crystalBall = this.add.image(120, 390, 'crystal_ball_sd');
+    this.crystalBall.setScale(0.0625);  // 16 / 256
 
     // ── 布布（動畫 sprite）──
     this.bubu = this.physics.add.sprite(70, 412, 'bubu_sprites', 0);
     this.bubu.setScale(this.CHAR_SCALE);
     this.bubu.setCollideWorldBounds(true);
     this.bubu.setFlipX(false);  // 新 spritesheet 預設朝右
-    this.bubu.body.setSize(160, 164);
-    this.bubu.body.setOffset(0, 0);
+    // 人物實際約 159x156，縮小碰撞箱到主要身體
+    this.bubu.body.setSize(90, 155);
+    this.bubu.body.setOffset(35, 9);
 
     // ── 碰撞設定 ──
     this.physics.add.collider(this.nana, this.platforms);
     this.physics.add.collider(this.bubu, this.platforms);
+    // 🎯 角色之間也要碰撞，才不會重疊
+    this.physics.add.collider(this.nana, this.bubu);
     this.physics.add.overlap(this.nana, this.stars, this.collectStar, null, this);
     this.physics.add.overlap(this.bubu, this.stars, this.collectStar, null, this);
 
@@ -150,6 +149,7 @@ class GameScene extends Phaser.Scene {
     this.keyQ = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Q);  // 切角色
     this.key1 = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ONE);
     this.key2 = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TWO);
+    this.keyR = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);   // 重新開始
 
     // ── 雙角色系統 ──
     this.activeChar = 'nana';       // 'nana' 或 'bubu'
@@ -184,11 +184,15 @@ class GameScene extends Phaser.Scene {
     this.canDoubleJump = false;
     this.hasDoubleJumped = false;
     this.score = 0;
-    this.wasOnGround = true;  // 地面滯後用
-    this.landingCooldowns = {};  // 落地塵埃冷卻
-    this.dashCooldown = 0;       // 衝刺冷卻
-    this.jumpBufferTimer = 0;    // 跳躍緩衝幀數
-    this.followerJumpCooldown = 0; // AI 跳躍冷卻
+    this.wasOnGround = true;
+    this._prevOnGround = true;  // 避免開場觸發落地塵埃
+    this.airFrameCount = 0;
+    this._justLeftGround = false;
+    this.landingCooldowns = {};
+    this.dashCooldown = 0;
+    this.jumpBufferTimer = 0;
+    this.followerJumpCooldown = 0;
+    this.isPaused = false;
 
     // ── UI ──
     this.scoreText = this.add.text(16, 16, '星靈碎片: 0 / 3', {
@@ -224,6 +228,19 @@ class GameScene extends Phaser.Scene {
 
   update() {
     if (this.gameWon) return;
+
+    // ESC 暫停開關（不受 isPaused 影響）
+    if (Phaser.Input.Keyboard.JustDown(this.keyESC)) {
+      this.togglePause();
+      return;
+    }
+    if (this.isPaused) return;
+
+    // R 重新開始
+    if (Phaser.Input.Keyboard.JustDown(this.keyR)) {
+      this.scene.restart();
+      return;
+    }
 
     const speed = 200;
     const dashCooldownFrames = 60; // ~1 秒
@@ -350,10 +367,11 @@ class GameScene extends Phaser.Scene {
       if (canGroundJump) {
         activeBody.setVelocityY(-400);
         this.jumpBufferTimer = 0;
-      } else if (isNana && this.canDoubleJump && !this.hasDoubleJumped) {
+      } else if (this.canDoubleJump && !this.hasDoubleJumped) {
+        // 二段跳（娜娜 & 布布都有）
         activeBody.setVelocityY(-350);
         this.hasDoubleJumped = true;
-        active.play('nana_doublejump');
+        active.play(isNana ? 'nana_doublejump' : 'bubu_doublejump');
         this.createJumpEffect(active.x, active.y + 10);
       }
     }
@@ -460,9 +478,40 @@ class GameScene extends Phaser.Scene {
       this.shootMagic();
     }
 
-    // ── ESC 暫停 ──
-    if (Phaser.Input.Keyboard.JustDown(this.keyESC)) {
-      this.scene.pause();
+  }
+
+  }
+
+  // ══════════════════════════════════
+  // 暫停 / 重新開始
+  // ══════════════════════════════════
+  togglePause() {
+    this.isPaused = !this.isPaused;
+    if (this.isPaused) {
+      this._pauseOverlay = this.add.rectangle(416, 240, 832, 480, 0x000000, 0.7).setDepth(200).setScrollFactor(0);
+      this._pauseText = this.add.text(416, 160, '⏸ 暫停中', {
+        fontSize: '32px', fill: '#d5a6e8', fontFamily: 'monospace'
+      }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
+
+      const btnStyle = {
+        fontSize: '18px', fill: '#d5a6e8', fontFamily: 'monospace',
+        backgroundColor: '#3a1a5a', padding: { x: 14, y: 8 }
+      };
+
+      const resumeBtn = this.add.text(416, 240, '▶ 繼續', btnStyle)
+        .setOrigin(0.5).setDepth(201).setScrollFactor(0).setInteractive({ useHandCursor: true });
+      resumeBtn.on('pointerdown', () => this.togglePause());
+
+      const restartBtn = this.add.text(416, 290, '🔄 重新開始', btnStyle)
+        .setOrigin(0.5).setDepth(201).setScrollFactor(0).setInteractive({ useHandCursor: true });
+      restartBtn.on('pointerdown', () => { this.isPaused = false; this.scene.restart(); });
+
+      const menuBtn = this.add.text(416, 340, '📋 選關卡', btnStyle)
+        .setOrigin(0.5).setDepth(201).setScrollFactor(0).setInteractive({ useHandCursor: true });
+      menuBtn.on('pointerdown', () => { this.isPaused = false; this.scene.start('LevelSelectScene'); });
+    } else {
+      if (this._pauseOverlay) { this._pauseOverlay.destroy(); this._pauseOverlay = null; }
+      if (this._pauseText) { this._pauseText.destroy(); this._pauseText = null; }
     }
   }
   // ── 虛擬 D-Pad（觸控用）──
@@ -601,8 +650,8 @@ class GameScene extends Phaser.Scene {
     const dir = this.nana.flipX ? -1 : 1;
     const bx = this.nana.x + dir * 20;
     const by = this.nana.y;
-    const ball = this.add.image(bx, by, 'crystal_ball');
-    ball.setScale(0.8);
+    const ball = this.add.image(bx, by, 'crystal_ball_sd');
+    ball.setScale(0.05);  // 16*0.8 / 256
     ball.setTint(0x9b59b6);
     this.tweens.add({
       targets: ball,
@@ -619,9 +668,9 @@ class GameScene extends Phaser.Scene {
 
     this.createJumpEffect(star.x, star.y);
     for (let i = 0; i < 8; i++) {
-      const p = this.add.image(star.x, star.y, 'star');
+      const p = this.add.image(star.x, star.y, 'star_sd');
       p.setTint(0xffd700);
-      p.setScale(0.5);
+      p.setScale(0.03);  // 4 / 128
       this.tweens.add({
         targets: p,
         x: p.x + Phaser.Math.Between(-30, 30),
