@@ -480,7 +480,6 @@ class GameScene extends Phaser.Scene {
 
   }
 
-  }
 
   // ══════════════════════════════════
   // 暫停 / 重新開始
