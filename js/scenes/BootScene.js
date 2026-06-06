@@ -18,6 +18,7 @@ class BootScene extends Phaser.Scene {
     this.load.image('star_sd', 'img/star_sd.png');
     this.load.image('forest_platform_sd', 'img/forest_platform_sd.png');
     this.load.image('will_o_wisp_sd', 'img/will_o_wisp_sd.png');
+    this.load.image('ice_pillar_sd', 'img/ice_pillar_sd.png');
   }
 
   create() {

@@ -33,17 +33,20 @@ class CrystalCavernScene extends Phaser.Scene {
       });
     }
 
-    // 背景水晶柱裝飾
+    // 背景水晶柱裝飾（SD 生成高解析）
     for (let i = 0; i < 8; i++) {
-      const pillar = this.add.rectangle(
+      const pillar = this.add.image(
         Phaser.Math.Between(20, 800),
         Phaser.Math.Between(-30, 550),
-        8, Phaser.Math.Between(40, 120),
-        0x3366aa, 0.2
+        'ice_pillar_sd'
       );
+      const s = Phaser.Math.FloatBetween(0.04, 0.1);
+      pillar.setScale(s, s * Phaser.Math.FloatBetween(2, 3));  // 拉長成冰柱比例
+      pillar.setAlpha(Phaser.Math.FloatBetween(0.15, 0.35));
+      pillar.setTint(0x4488cc);
       this.tweens.add({
         targets: pillar,
-        alpha: 0.4,
+        alpha: pillar.alpha + 0.15,
         duration: Phaser.Math.Between(2000, 4000),
         yoyo: true,
         repeat: -1
